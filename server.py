@@ -17,11 +17,19 @@ print("server socket bound to port %s" %(port))
 s.listen(5)
 print("server socket is listening")
 
-while True:
+s.settimeout(1)
 
-    (client_socket, address) = s.accept()
+try:
+    while True:
+        try:
+            (client_socket, address) = s.accept()
+            print(f"spawning thread to handle client with address:\n{address}")
+            c_thread = threading.Thread(target=respond_to_client, args=(client_socket,))
+            c_thread.start()
 
-    print(f"spawning thread to handle client with address:\n{address}")
+        except socket.timeout:
+            pass
 
-    c_thread = threading.Thread(target=respond_to_client, args=(client_socket,))
-    c_thread.start()
+except KeyboardInterrupt:
+    print("server terminated")
+    s.close()
