@@ -1,7 +1,6 @@
 import socket
 
-MSGLEN = 41
-chunk_size = 1024
+chunk_size = 4096
 
 class ClientSocket:
 
@@ -11,41 +10,41 @@ class ClientSocket:
         else:
             self.s = s
 
-        print("client socket created")
-
     def connect(self, host, port):
         self.s.connect((host, port))
-        print(f"client connectd to {host}, {port}")
 
     def c_send(self, msg):
+
         totalsent = 0
-        while totalsent < MSGLEN:
+
+        while totalsent < len(msg):
+
             sent = self.s.send(msg[totalsent:].encode())
+
             if sent == 0:
                 raise RuntimeError("socket connection broken")
 
             totalsent = totalsent + sent
 
-    def c_recv(self):
+    def c_recv(self): #receives null byte delimited messages
+
         chunks = []
         bytes_recd = 0
-        while bytes_recd < MSGLEN:
-            chunk = self.s.recv(min(MSGLEN - bytes_recd, chunk_size))
-            # print("[" + chunk.decode() + "]")
+
+        while True:
+
+            chunk = self.s.recv(chunk_size)
+
             if chunk == b'':
                 raise RuntimeError("socket connection broken")
+
             chunks.append(chunk)
             bytes_recd = bytes_recd + len(chunk)
+
+            if chunk[-1] == 0:
+                break
 
         return (b''.join(chunks)).decode()
 
     def c_close(self):
         self.s.close()
-
-client = ClientSocket()
-
-client.connect('127.0.0.1', 5890)
-
-print(client.c_recv())
-
-client.c_close()
