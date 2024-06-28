@@ -6,15 +6,20 @@ games = dict()
 
 def respond_to_client(client_socket, address):
 
-    c = ClientSocket(client_socket)
+    c = Client(client_socket)
 
-    msg = c.c_recv()
+    msg = c.recv_msg()
 
     if msg == "start game\0":
-        c.c_send("starting game\0")
-        #create a new game
+        c.send_msg("starting game\0")
+        
+    elif msg == "join game\0":
+        c.send_msg("joining game\0")
 
-    c.c_close()
+    else:
+        c.send_msg("")
+
+    c.close_connection()
 
 s = socket.socket()
 print("server socket created")

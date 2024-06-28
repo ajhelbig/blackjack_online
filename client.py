@@ -2,7 +2,7 @@ import socket
 
 chunk_size = 4096
 
-class ClientSocket:
+class Client:
 
     def __init__(self, s=None):
         if s == None:
@@ -13,7 +13,7 @@ class ClientSocket:
     def connect(self, host, port):
         self.s.connect((host, port))
 
-    def c_send(self, msg):
+    def send_msg(self, msg):
 
         totalsent = 0
 
@@ -26,7 +26,7 @@ class ClientSocket:
 
             totalsent = totalsent + sent
 
-    def c_recv(self): #receives null byte delimited messages
+    def recv_msg(self): #receives null byte delimited messages
 
         chunks = []
         bytes_recd = 0
@@ -46,5 +46,5 @@ class ClientSocket:
 
         return (b''.join(chunks)).decode()
 
-    def c_close(self):
+    def close_connection(self):
         self.s.close()
