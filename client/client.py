@@ -15,6 +15,8 @@ class Client:
 
     def send_msg(self, msg):
 
+        msg = msg + '\0'
+
         totalsent = 0
 
         while totalsent < len(msg):
@@ -44,7 +46,11 @@ class Client:
             if chunk[-1] == 0:
                 break
 
-        return (b''.join(chunks)).decode()
+        msg = b''.join(chunks)
+
+        final_msg = msg[:-1] #removing the delimiter
+
+        return final_msg.decode()
 
     def close_connection(self):
         self.s.close()
