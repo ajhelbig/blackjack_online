@@ -1,4 +1,4 @@
-from blackjack.card import *
+from games.blackjack.card import *
 from random import shuffle
 
 suits = ["H", "D", "C", "S"]

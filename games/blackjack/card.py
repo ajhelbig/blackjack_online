@@ -6,6 +6,9 @@ class Card:
 		self.suit = ""
 		self.symbol = ""
 
+	def soft_ace(self):
+		self.value = 1
+
 	def stringify(self):
 
-		return f"{self.value} {self.suit} {self.symbol},"
+		return f"{self.value} {self.suit} {self.symbol}"
