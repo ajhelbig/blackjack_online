@@ -5,7 +5,7 @@ from games.blackjack.deck import *
 class Game:
 
 	def __init__(self, num_decks):
-		self.game_id = id(self)
+		self.game_id = str(id(self))
 		self.players = dict()
 		self.dealer = Dealer()
 		self.deck = Deck(num_decks=num_decks)

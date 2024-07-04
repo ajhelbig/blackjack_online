@@ -1,53 +1,85 @@
 from client.client import *
 from client.game_instance import *
 from assets.text import *
+import threading
+import select
 
 c = Client()
 c.connect('10.0.0.8', 5890)
 g = Game_Instance()
 
-while True: #menu loop
+while True: #Menu loop
 
-	choice = input(greeting)
+	try:
+		choice = input(greeting)
+	except KeyboardInterrupt:
+		print(exit_msg, flush=True)
+		exit()
 
 	if choice == "join":
 
-		game_id = input("Enter game id below.\nGame ID: ")
+		try:
+			game_id = input(enter_game_id)
+		except KeyboardInterrupt:
+			print(exit_msg, flush=True)
+			exit()
+
+		if game_id == "back":
+			continue
 
 		c.send_msg(f"join {game_id}")
 		msg_recv = c.recv_msg().split()
-		print(msg_recv)
-		break
+
+		while msg_recv[-1] != "success":
+			print(invalid_game_id)
+
+			try:
+				game_id = input(enter_game_id)
+			except KeyboardInterrupt:
+				print(exit, flush=True)
+				exit()
+
+			if game_id == "back":
+				break
+
+			c.send_msg(f"join {game_id}")
+			msg_recv = c.recv_msg().split()
+
+		if msg_recv[-1] == "success":
+			print("You have joined the game successfully!")
+			g.game_id = msg_recv[0]
+			g.player_id = msg_recv[1]
+			break
 
 	elif choice == "start":
 
 		c.send_msg("start")
-		msg_recv = c.recv_msg().split()	
-		print(msg_recv)
-		break
+		msg_recv = c.recv_msg().split()
+		
+		if msg_recv[-1] == "success":
+			print(f"Your Game ID is: {msg_recv[0]}")
+			g.game_id = msg_recv[0]
+			g.player_id = msg_recv[1]
+			break
 
-	print(invalid_input)
-
-# while True:#game play loop
+while True: #Game play loop
 	
-# 	bet = input(place_bet)
+	try:
+		bet = input(place_bet)
+	except KeyboardInterrupt:
+		print(exit_msg, flush=True)
+		exit()
 
-# 	try:
-# 		float(bet)
+	try:
+		float(bet)
 
-# 	except:
-# 		print(invalid_bet)
-# 		break
+	except:
+		print(invalid_bet)
+		continue
 
-# 	c.send_msg(f"{g.game_id} {g.player_id} bet {bet}")
+	c.send_msg(f"{g.game_id} {g.player_id} bet {bet}")
+	msg_recv = c.recv_msg()
+	print(msg_recv)
+	break
 
-# 	msg_recv = c.recv_msg()
-
-# 	print(msg_recv)
-
-# 	while msg_recv[0] != "round" and msg_recv[1] != "start":
-# 		msg_recv = c.recv_msg().split()
-
-# 	print(msg_recv)
-
-# c.close_connection()
+c.close_connection()

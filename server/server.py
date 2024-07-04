@@ -1,6 +1,5 @@
 import socket
 import threading
-from client.client import *
 
 class Server:
 
@@ -26,7 +25,7 @@ class Server:
 
                     (client_socket, address) = self.s.accept()
 
-                    print(f"spawning thread to handle client with address:\n{address}")
+                    print(f"spawning thread to handle client {address}")
 
                     threading.Thread(target=client_handler, args=(client_socket, address,)).start()
                     
