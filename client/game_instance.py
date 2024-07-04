@@ -4,6 +4,7 @@ class Game_Instance:
     def __init__(self):
         self.game_id = ""
         self.player_id = ""
+        self.players = list()
         self.player_hands = list()
         self.dealer_hands = list()
 

@@ -5,7 +5,7 @@ import threading
 import select
 
 c = Client()
-c.connect('10.0.0.8', 5890)
+c.connect('10.0.0.5', 5890)
 g = Game_Instance()
 
 while True: #Menu loop
