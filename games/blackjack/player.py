@@ -2,9 +2,8 @@ from games.blackjack.hand import *
 
 class Player:
 
-	def __init__(self, client, bank):
+	def __init__(self, bank):
 		self.player_id = id(self)
-		self.client = client
 		self.bet = 0
 		self.bank = bank
 		self.hands = list()

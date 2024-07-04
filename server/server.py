@@ -28,9 +28,8 @@ class Server:
 
                     print(f"spawning thread to handle client with address:\n{address}")
 
-                    c_thread = threading.Thread(target=client_handler, args=(client_socket, address,))
-                    c_thread.start()
-
+                    threading.Thread(target=client_handler, args=(client_socket, address,)).start()
+                    
                 except socket.timeout:
                     pass
 
