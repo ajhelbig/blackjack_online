@@ -1,8 +1,6 @@
 from client.client import *
 from client.game_instance import *
 from assets.text import *
-import threading
-import select
 
 c = Client()
 c.connect('10.0.0.5', 5890)
