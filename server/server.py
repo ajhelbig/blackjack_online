@@ -33,7 +33,7 @@ class Server:
                     self.potential_readers, self.potential_writers, [], 1)
 
                 for s in ready_to_read:
-                    sock = Client(s)
+                    sock = Client(s)# maybe not the best way to go
                     if sock.s is self.s:# New connection, accept it
                         
                         client_socket, client_address = sock.s.accept()
@@ -45,8 +45,10 @@ class Server:
                     else:# Handle data from existing client sockets
                         
                         try:
+                            print("about to get msg")
                             self.msg = sock.recv_msg()
-                            print(f"Received data from {sock.getpeername()}: {self.msg}")
+                            print("got msg")
+                            print(f"Received data from {sock.s.getpeername()}: {self.msg}")
                             self.msg_sent = False
 
                         except:# Client disconnected
@@ -57,7 +59,8 @@ class Server:
                             self.num_connections -= 1
 
                 if self.num_connections == len(ready_to_write) and not self.msg_sent:
-                    for sock in ready_to_write:
+                    for s in ready_to_write:
+                            sock = Client(s)# maybe not the best way to go
                             sock.send_msg(self.msg)
                             self.msg_sent = True
 
