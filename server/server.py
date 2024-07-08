@@ -1,5 +1,6 @@
 import socket
-import threading
+import select
+from client.client import *
 
 class Server:
 
@@ -10,29 +11,62 @@ class Server:
 
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        self.s.bind(('',port))
+        self.s.bind(('', port))
         print("server socket bound to port %s" %(port))
 
         self.s.listen(5)
         print("server socket is listening")
 
-        self.s.settimeout(1)
-        
-    def start(self, client_handler):
-        try:
-            while True:
-                try:
+        self.s.setblocking(False)
 
-                    (client_socket, address) = self.s.accept()
+        self.potential_readers = [self.s]
+        self.potential_writers = []
 
-                    print(f"spawning thread to handle client {address}")
+        self.num_connections = 0
+        self.msg = str()
+        self.msg_sent = True
 
-                    threading.Thread(target=client_handler, args=(client_socket, address,)).start()
-                    
-                except socket.timeout:
-                    pass
+    def start(self):
+        while True:
+            try:
+                ready_to_read, ready_to_write, _ = select.select(
+                    self.potential_readers, self.potential_writers, [], 1)
 
-        except KeyboardInterrupt:
+                for s in ready_to_read:
+                    sock = Client(s)
+                    if sock.s is self.s:# New connection, accept it
+                        
+                        client_socket, client_address = sock.s.accept()
+                        print(f"New connection from {client_address}")
+                        self.potential_readers.append(client_socket)
+                        self.potential_writers.append(client_socket)
+                        self.num_connections += 1
 
-            print("\nserver terminated")
-            self.s.close()
+                    else:# Handle data from existing client sockets
+                        
+                        try:
+                            self.msg = sock.recv_msg()
+                            print(f"Received data from {sock.getpeername()}: {self.msg}")
+                            self.msg_sent = False
+
+                        except:# Client disconnected
+                            print(f"Client {sock.s.getpeername()} disconnected")
+                            sock.close_connection()
+                            self.potential_readers.remove(sock.s)
+                            self.potential_writers.remove(sock.s)
+                            self.num_connections -= 1
+
+                if self.num_connections == len(ready_to_write) and not self.msg_sent:
+                    for sock in ready_to_write:
+                            sock.send_msg(self.msg)
+                            self.msg_sent = True
+
+            except KeyboardInterrupt:
+                print("\nserver terminated")
+                for sock in self.potential_readers:
+                    sock.close()
+
+                for sock in self.potential_writers:
+                    sock.close()
+
+                break

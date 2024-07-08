@@ -1,4 +1,5 @@
 import socket
+import threading
 
 chunk_size = 4096
 
@@ -28,7 +29,7 @@ class Client:
 
             totalsent = totalsent + sent
 
-    def recv_msg(self): #receives null byte delimited messages
+    def recv_msg(self):
 
         chunks = []
         bytes_recd = 0
@@ -48,9 +49,23 @@ class Client:
 
         msg = b''.join(chunks)
 
-        final_msg = msg[:-1] #removing the delimiter
+        final_msg = msg[:-1]
 
         return final_msg.decode()
 
     def close_connection(self):
         self.s.close()
+
+    def thread_send(self):
+        while True:
+            msg = input("> ")
+            self.send_msg(msg)
+
+    def thread_recv(self):
+        while True:
+            msg = self.recv_msg()
+            print(f"msg recv: {msg}")
+
+    def start(self):
+        threading.Thread(target=self.thread_recv).start()
+        threading.Thread(target=self.thread_send).start()

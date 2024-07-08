@@ -1,5 +1,4 @@
 import socket
-import sys
 import threading
 
 port = 5890
@@ -15,8 +14,9 @@ def send_msg(sock):
 def recv_msg(sock):
     while True:
         msg = sock.recv(1024)
-        sys.stdout.flush()
         print(msg.decode())
 
-threading.Thread(target=send_msg, args=(c, )).start()
-threading.Thread(target=recv_msg, args=(c, )).start()
+threading.Thread(target=send_msg, args=(c,)).start()
+threading.Thread(target=recv_msg, args=(c,)).start()
+
+c.close()

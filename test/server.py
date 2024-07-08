@@ -1,7 +1,5 @@
 import socket
 import select
-import random
-import time
 
 port = 5890
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -21,21 +19,23 @@ s.setblocking(False)
 potential_readers = [s]  # Add the server socket to the list
 potential_writers = []
 
-msg_num = 1
+num_connections = 0
+msg = str()
+msg_sent = True
 
 while True:
     try:
         ready_to_read, ready_to_write, _ = select.select(
-            potential_readers, potential_writers, [], 1)
+            potential_readers, potential_writers, [], 5)
 
         for sock in ready_to_read:
             if sock is s:# New connection, accept it
                 
                 client_socket, client_address = s.accept()
                 print(f"New connection from {client_address}")
-                state = "GETUSERNAME"
                 potential_readers.append(client_socket)
                 potential_writers.append(client_socket)
+                num_connections += 1
 
             else:# Handle data from existing client sockets
                 
@@ -43,23 +43,25 @@ while True:
 
                 if data:
                     print(f"Received data from {sock.getpeername()}: {data.decode()}")
+                    msg = data.decode()
+                    msg_sent = False
+
                 else:
                     # Client disconnected
                     print(f"Client {sock.getpeername()} disconnected")
                     sock.close()
                     potential_readers.remove(sock)
                     potential_writers.remove(sock)
+                    num_connections -= 1
                     
-
-        for sock in ready_to_write:
-                if state == "GETUSERNAME":
-                    response = f"message #{msg_num}"
+        if num_connections == len(ready_to_write) and not msg_sent:
+            for sock in ready_to_write:
+                    response = f"{msg}"
                     sock.send(response.encode())
-                    msg_num += 1
-                    time.sleep(random.randrange(1, 5))
+                    msg_sent = True
 
     except KeyboardInterrupt:
-        print("\nServer terminated")
+        print("\nserver terminated")
         for sock in potential_readers:
             sock.close()
 
