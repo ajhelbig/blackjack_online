@@ -65,7 +65,9 @@ class Server:
         if self.num_connections == len(ready_to_write) and not self.msg_sent:
 
             for s in ready_to_write:
+
                     sock = Client(s)# maybe not the best way to go
+                    
                     sock.send_msg(self.msg)
                     self.msg_sent = True
 
