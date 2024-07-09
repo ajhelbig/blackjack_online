@@ -1,6 +1,7 @@
 import socket
 import threading
-# from client.game_instance import *
+from client.game import Game
+from raylib import *
 
 chunk_size = 4096
 
@@ -12,7 +13,7 @@ class Client:
         else:
             self.s = s
 
-        # self.game = Game_Instance()
+        self.game = Game()
 
     def connect(self, host, port):
         self.s.connect((host, port))
@@ -61,10 +62,8 @@ class Client:
 
     def thread_send(self):
         while True:
-            # msg = self.game.play()
             msg = input("> ")
-            if msg != "":
-                self.send_msg(msg)
+            self.send_msg(msg)
 
     def thread_recv(self):
         while True:
@@ -74,3 +73,6 @@ class Client:
     def start(self):
         threading.Thread(target=self.thread_recv).start()
         threading.Thread(target=self.thread_send).start()
+
+        self.game.play()
+
