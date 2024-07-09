@@ -3,7 +3,7 @@ from client.client import *
 # from assets.text import *
 
 c = Client()
-c.connect('10.0.0.5', 5890)
+c.connect('10.0.0.8', 5890)
 c.start()
 
 # g = Game_Instance()
