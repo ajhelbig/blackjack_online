@@ -1,5 +1,6 @@
 import socket
 import threading
+# from client.game_instance import *
 
 chunk_size = 4096
 
@@ -10,6 +11,8 @@ class Client:
             self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         else:
             self.s = s
+
+        # self.game = Game_Instance()
 
     def connect(self, host, port):
         self.s.connect((host, port))
@@ -58,8 +61,10 @@ class Client:
 
     def thread_send(self):
         while True:
+            # msg = self.game.play()
             msg = input("> ")
-            self.send_msg(msg)
+            if msg != "":
+                self.send_msg(msg)
 
     def thread_recv(self):
         while True:
