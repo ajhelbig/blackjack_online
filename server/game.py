@@ -3,7 +3,8 @@ class Game:
 
     def __init__(self, server):
 
-        self.potential_readers = [server]
+        self.game_id = id(self)
+        self.potential_readers = []
         self.potential_writers = []
         self.potential_errors = []
         self.timeout = 1
