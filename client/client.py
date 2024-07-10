@@ -1,7 +1,6 @@
 import socket
 import threading
 from client.game import Game
-from raylib import *
 
 chunk_size = 4096
 
