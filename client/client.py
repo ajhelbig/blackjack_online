@@ -74,4 +74,3 @@ class Client:
         threading.Thread(target=self.thread_send).start()
 
         self.game.play()
-
