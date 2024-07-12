@@ -12,7 +12,9 @@ class Client:
         else:
             self.s = s
 
-        self.game = Game()
+        self.send_q = []
+        self.recv_q = []
+        self.game = Game(self.send_q, self.recv_q)
 
     def connect(self, host, port):
         self.s.connect((host, port))
@@ -59,18 +61,22 @@ class Client:
     def close_connection(self):
         self.s.close()
 
-    def thread_send(self):
+    def thread_send(self, send_q):
         while True:
-            msg = input("> ")
-            self.send_msg(msg)
+            try:
+                msg = send_q.pop(0)
+                if msg:
+                    self.send_msg(msg)
+            except:
+                pass
 
-    def thread_recv(self):
+    def thread_recv(self, recv_q):
         while True:
             msg = self.recv_msg()
-            print(f"msg recv: {msg}")
+            recv_q.append(msg)
 
     def start(self):
-        threading.Thread(target=self.thread_recv).start()
-        threading.Thread(target=self.thread_send).start()
+        threading.Thread(target=self.thread_recv, args=(self.recv_q,)).start()
+        threading.Thread(target=self.thread_send, args=(self.send_q,)).start()
 
         self.game.play()

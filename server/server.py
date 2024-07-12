@@ -1,5 +1,6 @@
 import socket
 import select
+from server.user import User
 
 class Server:
 
@@ -24,10 +25,10 @@ class Server:
         self.potential_server_writers = []
 
         self.num_connections = 0
-        self.msg = str()
-        self.msg_sent = True
 
         self.games = dict()
+        self.users = dict()
+        self.usernames = dict()
 
     def send_msg(self, sock, msg):
 
@@ -73,20 +74,37 @@ class Server:
         print(f"New connection from {client_address}")
         self.potential_server_readers.append(client_socket)
         self.potential_server_writers.append(client_socket)
+
+        new_user = User(client_socket)
+        self.users[new_user.id] = new_user
+
         self.num_connections += 1
         print(f"Number of connected clients: {self.num_connections}")
 
     def handle_existing_connection_read(self, sock):
         try:
-            self.msg = self.recv_msg(sock)
-            print(f"Received data from {sock.getpeername()}: {self.msg}")
-            self.msg_sent = False
+            msg = self.recv_msg(sock).split()
+
+            print(f"Received data from {sock.getpeername()}: {msg}")
+
+            if msg[0] == 'REGISTER_USERNAME':
+                if msg[1] in self.usernames:
+                    user.send_q.append("TAKEN")
+                else:
+                    user = self.users[id(sock)]
+                    self.usernames[msg[1]] = user
+                    user.name = msg[1]
+                    user.send_q.append("SUCCESS")
 
         except:# Client disconnected
             print(f"Client {sock.getpeername()} disconnected")
             sock.close()
             self.potential_server_readers.remove(sock)
             self.potential_server_writers.remove(sock)
+
+            del self.usernames[self.users[id(sock)].name]
+            del self.users[id(sock)]
+
             self.num_connections -= 1
             print(f"Number of connected clients: {self.num_connections}")
 
@@ -100,11 +118,18 @@ class Server:
                         self.handle_existing_connection_read(sock)
 
     def handle_ready_to_write(self, ready_to_write):
-        if self.num_connections == len(ready_to_write) and not self.msg_sent:
 
-            for sock in ready_to_write:
-                    self.send_msg(sock, self.msg)
-                    self.msg_sent = True
+        for sock in ready_to_write:
+                try:
+                    user = self.users[id(sock)]
+                    msg = user.get_next_msg()
+
+                    if not msg:
+                        pass
+                    else:
+                        self.send_msg(sock, msg)
+                except:
+                    pass
 
     def start(self):
         while True:
