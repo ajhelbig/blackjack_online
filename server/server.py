@@ -89,6 +89,7 @@ class Server:
 
             if msg[0] == 'REGISTER_USERNAME':
                 if msg[1] in self.usernames:
+                    user = self.users[id(sock)]
                     user.send_q.append("TAKEN")
                 else:
                     user = self.users[id(sock)]

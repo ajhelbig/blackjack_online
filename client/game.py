@@ -37,6 +37,7 @@ class Game:
                                         self.window_size[1] * self.menu_y_scale_factor,
                                         theme=pygame_menu.themes.THEME_DARK)
 
+        self.start_menu.add.label(title='', label_id='username messager', wordwrap=True)
         self.start_menu.add.text_input('Username: ', textinput_id='username')
         self.start_menu.add.button('Continue', self.register_username)
 
@@ -49,6 +50,22 @@ class Game:
 
         self.menus = [self.start_menu, self.main_menu, self.join_menu]
         self.current_menu = self.start_menu
+    
+    def recv_msg(self, responses):
+        resp = str()
+        while True:
+            try:
+                resp = self.recv_q.pop(0)
+                if resp in responses:
+                    return resp
+                else:
+                    self.recv_q.append(resp)
+            except:
+                pass
+
+    def send_msg(self, code, msg):
+        final_msg = code + ' ' + msg
+        self.send_q.append(final_msg)
 
     def join_game(self):
         print('join')
@@ -60,25 +77,28 @@ class Game:
 
     def register_username(self):
         username = self.start_menu.get_widget('username').get_value()
-        username = 'REGISTER_USERNAME ' + username
-        self.send_q.append(username)
-        ret = str()
 
-        while True:
-            try:
-                ret = self.recv_q.pop(0)
-                
-                if ret == "SUCCESS":
-                    self.name = username
-                    self.current_menu = self.main_menu
-                    break
-                elif ret == "TAKEN":
-                    print(ret)
-                    break
-                else:
-                    self.recv_q.append(0)
-            except:
-                pass
+        if not username:
+            label = self.start_menu.get_widget('username messager')
+            label.set_title("A blank username won't.\n Try again.")
+            input = self.start_menu.get_widget('username')
+            input.clear()
+
+        else:
+            self.send_msg('REGISTER_USERNAME', username)
+
+            options = ["SUCCESS", "TAKEN"]
+            ret = self.recv_msg(options)
+
+            if ret == options[0]:
+                self.name = username
+                self.current_menu = self.main_menu
+            else:
+                label = self.start_menu.get_widget('username messager')
+                label.set_title('That username has been taken.\nTry again.')
+
+                input = self.start_menu.get_widget('username')
+                input.clear()
 
     def resize_menus(self):
         new_window_size = self.window.get_size()
