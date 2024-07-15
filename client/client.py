@@ -2,8 +2,6 @@ import socket
 import threading
 from client.game import Game
 
-chunk_size = 4096
-
 class Client:
 
     def __init__(self, s=None):
@@ -12,6 +10,7 @@ class Client:
         else:
             self.s = s
 
+        self.chunk_size = 4096
         self.send_q = []
         self.recv_q = []
         self.game = Game(self.send_q, self.recv_q)
@@ -41,7 +40,7 @@ class Client:
 
         while True:
 
-            chunk = self.s.recv(chunk_size)
+            chunk = self.s.recv(self.chunk_size)
 
             if chunk == b'':
                 raise RuntimeError("socket connection broken")

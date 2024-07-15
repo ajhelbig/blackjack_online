@@ -22,7 +22,7 @@ class Game:
 
         self.window = pygame.display.set_mode(self.window_size, pygame.RESIZABLE)
 
-        self.start_menu = pygame_menu.Menu('What Should We Call You?',
+        self.sign_in_menu = pygame_menu.Menu('Sign In',
                                         self.window_size[0] * self.menu_x_scale_factor, 
                                         self.window_size[1] * self.menu_y_scale_factor,
                                         theme=pygame_menu.themes.THEME_DARK)
@@ -37,9 +37,10 @@ class Game:
                                         self.window_size[1] * self.menu_y_scale_factor,
                                         theme=pygame_menu.themes.THEME_DARK)
 
-        self.start_menu.add.label(title='', label_id='username messager', wordwrap=True)
-        self.start_menu.add.text_input('Username: ', textinput_id='username')
-        self.start_menu.add.button('Continue', self.register_username)
+        self.sign_in_menu.add.label(title='', label_id='sign in messager', wordwrap=True)
+        self.sign_in_menu.add.text_input('Username: ', textinput_id='username')
+        self.sign_in_menu.add.text_input('Password: ', textinput_id='password', password=True)
+        self.sign_in_menu.add.button('Continue', self.sign_in)
 
         self.main_menu.add.button('Start Game', self.start_game)
         self.main_menu.add.button('Join Game', self.join_menu)
@@ -48,8 +49,8 @@ class Game:
         self.join_menu.add.text_input('Game ID: ')
         self.join_menu.add.button('Join', self.join_game)
 
-        self.menus = [self.start_menu, self.main_menu, self.join_menu]
-        self.current_menu = self.start_menu
+        self.menus = [self.sign_in_menu, self.main_menu, self.join_menu]
+        self.current_menu = self.sign_in_menu
     
     def recv_msg(self, responses):
         resp = str()
@@ -75,30 +76,34 @@ class Game:
         print("start")
         pass
 
-    def register_username(self):
-        username = self.start_menu.get_widget('username').get_value()
+    def sign_in(self):
+        username = self.sign_in_menu.get_widget('username').get_value()
+        password = self.sign_in_menu.get_widget('password').get_value()
 
-        if not username:
-            label = self.start_menu.get_widget('username messager')
-            label.set_title("A blank username won't.\n Try again.")
-            input = self.start_menu.get_widget('username')
-            input.clear()
+        if not username or not password:
+            label = self.sign_in_menu.get_widget('sign in messager')
+            label.set_title("A blank username or password won't work.\nTry again.")
+            u = self.sign_in_menu.get_widget('username')
+            p = self.sign_in_menu.get_widget('password')
+            u.clear()
+            p.clear()
 
         else:
-            self.send_msg('REGISTER_USERNAME', username)
+            self.send_msg('SIGN_IN', username + ' ' + password)
 
-            options = ["SUCCESS", "TAKEN"]
+            options = ["SUCCESS", "FAIL"]
             ret = self.recv_msg(options)
 
-            if ret == options[0]:
+            if ret == "SUCCESS":
                 self.name = username
                 self.current_menu = self.main_menu
             else:
-                label = self.start_menu.get_widget('username messager')
-                label.set_title('That username has been taken.\nTry again.')
-
-                input = self.start_menu.get_widget('username')
-                input.clear()
+                label = self.sign_in_menu.get_widget('sign in messager')
+                label.set_title("The username or password is incorrect.")
+                u = self.sign_in_menu.get_widget('username')
+                p = self.sign_in_menu.get_widget('password')
+                u.clear()
+                p.clear()
 
     def resize_menus(self):
         new_window_size = self.window.get_size()

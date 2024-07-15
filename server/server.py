@@ -1,11 +1,15 @@
 import socket
 import select
 from server.user import User
+from server.db_client import DB_Client
 
 class Server:
 
-    def __init__(self, port):
-        
+    def __init__(self, port, db_host, db_port):
+
+        self.db = DB_Client()
+        self.db.connect(host=db_host, port=db_port)
+
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print("server socket created")
 
@@ -26,9 +30,9 @@ class Server:
 
         self.num_connections = 0
 
-        self.games = dict()
         self.users = dict()
         self.usernames = dict()
+        self.games = dict()
 
     def send_msg(self, sock, msg):
 
@@ -87,10 +91,13 @@ class Server:
 
             print(f"Received data from {sock.getpeername()}: {msg}")
 
-            if msg[0] == 'REGISTER_USERNAME':
+            if msg[0] == 'SIGN_IN':
+
+                #interact with database here
+
                 if msg[1] in self.usernames:
                     user = self.users[id(sock)]
-                    user.send_q.append("TAKEN")
+                    user.send_q.append("FAIL")
                 else:
                     user = self.users[id(sock)]
                     self.usernames[msg[1]] = user
