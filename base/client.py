@@ -1,6 +1,5 @@
 import socket
 import threading
-from client.game import Game
 
 class Client:
 
@@ -13,7 +12,6 @@ class Client:
         self.chunk_size = 4096
         self.send_q = []
         self.recv_q = []
-        self.game = Game(self.send_q, self.recv_q)
 
     def connect(self, host, port):
         self.s.connect((host, port))
@@ -74,8 +72,21 @@ class Client:
             msg = self.recv_msg()
             recv_q.append(msg)
 
+    def await_msg(self, msg_sent):
+        split_msg = msg_sent.split()
+        num_resp = int(split_msg[1])
+        responses = split_msg[2:2+num_resp]
+
+        while True:
+            try:
+                resp = self.recv_q.pop(0)
+                if resp in responses:
+                    return resp
+                else:
+                    self.recv_q.append(resp)
+            except:
+                pass
+
     def start(self):
         threading.Thread(target=self.thread_recv, args=(self.recv_q,)).start()
         threading.Thread(target=self.thread_send, args=(self.send_q,)).start()
-
-        self.game.play()

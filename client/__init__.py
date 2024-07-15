@@ -1,1 +1,1 @@
-from client.game import *
+from base.client import Client
