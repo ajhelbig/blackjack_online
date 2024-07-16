@@ -1,6 +1,6 @@
 from base.client import Client
 
-class DB_Client(Client):
+class DB_Client(Client): #refactor methods
 
     def __init__(self, s=None):
         super().__init__(s=s)
@@ -12,9 +12,7 @@ class DB_Client(Client):
     def create_account(self, msg):
         self.send_q.append(msg)
         return self.await_msg(msg)
-
-    def fetch(self, query):
-        pass
-
-    def store(self, data):
-        pass
+    
+    def start_game(self, msg):
+        self.send_q.append(msg)
+        return self.await_msg(msg)

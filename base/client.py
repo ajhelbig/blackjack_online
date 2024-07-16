@@ -79,11 +79,11 @@ class Client:
 
         while True:
             try:
-                resp = self.recv_q.pop(0)
-                if resp in responses:
-                    return resp
+                resp = self.recv_q.pop(0).split()
+                if resp[0] in responses:
+                    return ' '.join(resp)
                 else:
-                    self.recv_q.append(resp)
+                    self.recv_q.append(' '.join(resp))
             except:
                 pass
 

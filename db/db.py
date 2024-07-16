@@ -20,17 +20,17 @@ class DB(Server):
         if cur.execute("SELECT name FROM sqlite_master WHERE name='users'").fetchone() is None:
             self.create_users_table(cur)
 
-        if cur.execute("SELECT name FROM sqlite_master WHERE name='games'").fetchone() is None:
+        if cur.execute("SELECT name FROM sqlite_master WHERE name='blackjack_games'").fetchone() is None:
             self.create_games_table(cur)
 
         con.commit()
         con.close()
 
     def create_users_table(self, cur):
-        cur.execute('CREATE TABLE users(name, password, email, bank, user_id, logged_in)')
+        cur.execute('CREATE TABLE users(username, password, email, bank)')
 
     def create_games_table(self, cur):
-        cur.execute('CREATE TABLE games(user_id, game_id, game data)')
+        cur.execute('CREATE TABLE blackjack_games(username, gamename, game_password, num_players, current_level, house_bank, deck)')
 
     def handle_new_connection(self, sock):
         client_socket, _ = sock.accept()
@@ -43,12 +43,12 @@ class DB(Server):
         self.num_connections += 1
         print(f"Number of connected clients: {self.num_connections}")
 
-    def handle_sign_in(self, sock, msg):
+    def sign_in(self, sock, msg):
         con = sqlite3.connect(database=self.db_name, autocommit=self.db_autocommit)
         cur = con.cursor()
         user = self.db_users[id(sock)]
 
-        query = "SELECT name FROM users WHERE name = ?"
+        query = "SELECT username FROM users WHERE username = ?"
         res = cur.execute(query, (msg[-2], ))
 
         if res.fetchone() is None:
@@ -57,7 +57,7 @@ class DB(Server):
             con.close()
             return
         
-        query = "SELECT name FROM users WHERE name = ? AND password = ?"
+        query = "SELECT username FROM users WHERE username = ? AND password = ?"
         res = cur.execute(query, (msg[-2], msg[-1]))
 
         if res.fetchone() is None:
@@ -66,16 +66,21 @@ class DB(Server):
             con.close()
             return
         
-        user.send_q.append(msg[2])
+        query = "SELECT bank FROM users WHERE username = ?"
+        res = cur.execute(query, (msg[-2], ))
+
+        resp_msg = msg[2] + ' ' + res.fetchone()[0]
+        
+        user.send_q.append(resp_msg)
         con.commit()
         con.close()
 
-    def handle_create_account(self, sock, msg):
+    def create_account(self, sock, msg):
         con = sqlite3.connect(database=self.db_name, autocommit=self.db_autocommit)
         cur = con.cursor()
         user = self.db_users[id(sock)]
 
-        query = "SELECT name FROM users WHERE name = ?"
+        query = "SELECT username FROM users WHERE username = ?"
         res = cur.execute(query, (msg[-3], ))
 
         if res.fetchone() is not None:
@@ -83,19 +88,38 @@ class DB(Server):
             con.commit()
             con.close()
             return
-        
-        query = "SELECT COUNT(*) FROM users"
-        cur.execute(query)
-        res = cur.fetchone()
-        num_users = int(res[0])
 
         data = msg[-3:]
-        data.append(0)
-        data.append(num_users + 1)
-        data.append(True)
+        data.append("0")
         data = tuple(data)
         
-        query = "INSERT INTO users(name, password, email, bank, user_id, logged_in) VALUES (?, ?, ?, ?, ?, ?)"
+        query = "INSERT INTO users(username, password, email, bank) VALUES (?, ?, ?, ?)"
+        res = cur.execute(query, data)
+        
+        user.send_q.append(msg[2])
+        con.commit()
+        con.close()
+
+    def start_game(self, sock, msg):
+        con = sqlite3.connect(database=self.db_name, autocommit=self.db_autocommit)
+        cur = con.cursor()
+        user = self.db_users[id(sock)]
+
+        query = "SELECT gamename FROM blackjack_games WHERE gamename = ?"
+        res = cur.execute(query, (msg[-3], ))
+
+        if res.fetchone() is not None:
+            user.send_q.append(msg[3])
+            con.commit()
+            con.close()
+            return
+
+        data = msg[-4:-1]
+        data.append("1")
+        data.append("1")
+        data = tuple(data)
+        
+        query = "INSERT INTO blackjack_games(username, gamename, game_password, num_players, current_level) VALUES (?, ?, ?, ?, ?)"
         res = cur.execute(query, data)
         
         user.send_q.append(msg[2])
@@ -108,10 +132,13 @@ class DB(Server):
             print(f"Received msg: {msg}")
 
             if msg[0] == 'SIGN_IN':
-                self.handle_sign_in(sock, msg)
+                self.sign_in(sock, msg)
 
             elif msg[0] == 'CREATE_ACCOUNT':
-                self.handle_create_account(sock, msg)
+                self.create_account(sock, msg)
+
+            elif msg[0] == 'START_GAME_TYPE_0':
+                self.start_game(sock, msg)
 
         except Exception as e:
             print(e)

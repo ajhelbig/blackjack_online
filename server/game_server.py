@@ -2,6 +2,7 @@ import select
 from base.server import Server
 from server.user import User
 from server.db_client import DB_Client
+from games.blackjack import *
 
 class Game_Server(Server):
 
@@ -31,34 +32,49 @@ class Game_Server(Server):
         self.num_connections += 1
         print(f"Number of connected clients: {self.num_connections}")
 
-    def handle_sign_in(self, sock, msg):
+    def sign_in(self, sock, msg):
         user = self.server_users[id(sock)]
-        ret_val = self.db.sign_in(msg=' '.join(msg))
+        ret_val = self.db.sign_in(msg)
         user.send_q.append(ret_val)
+        ret_val = ret_val.split()
 
-        if ret_val == 'SUCCESS':
+        if ret_val[0] == 'SUCCESS':
             self.usernames[msg[1]] = user
             user.name = msg[1]
 
-    def handle_create_account(self, sock, msg):
+    def create_account(self, sock, msg):
         user = self.server_users[id(sock)]
-        ret_val = self.db.create_account(msg=' '.join(msg))
+        ret_val = self.db.create_account(msg)
         user.send_q.append(ret_val)
+        ret_val = ret_val.split()
 
-        if ret_val == 'SUCCESS':
+        if ret_val[0] == 'SUCCESS':
             self.usernames[msg[1]] = user
             user.name = msg[1]
 
+    def start_game(self, sock, msg, type):
+        user = self.server_users[id(sock)]
+        ret_val = self.db.start_game(msg)
+        user.send_q.append(ret_val)
+        ret_val = ret_val.split()
+
+        if type == 0 and ret_val[0] == "SUCCESS":
+                #initialize a game and add it to the games dict
+                pass
+                
     def handle_existing_connection_read(self, sock):
         try:
             msg = super().recv_msg(sock).split()
             print(f"Received data from {sock.getpeername()}: {msg}")
 
             if msg[0] == 'SIGN_IN':
-                self.handle_sign_in(sock, msg)
+                self.sign_in(sock, ' '.join(msg))
 
             elif msg[0] == 'CREATE_ACCOUNT':
-                self.handle_create_account(sock, msg)
+                self.create_account(sock, ' '.join(msg))
+
+            elif msg[0] == 'START_GAME_TYPE_0':
+                self.start_game(sock, ' '.join(msg), 0)
 
         except Exception as e:
             print(e)
