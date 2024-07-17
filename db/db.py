@@ -100,31 +100,32 @@ class DB(Server):
         con.commit()
         con.close()
 
-    def start_game(self, sock, msg):
+    def start_game(self, sock, msg, type):
         con = sqlite3.connect(database=self.db_name, autocommit=self.db_autocommit)
         cur = con.cursor()
         user = self.db_users[id(sock)]
 
-        query = "SELECT gamename FROM blackjack_games WHERE gamename = ?"
-        res = cur.execute(query, (msg[-3], ))
+        if type == 0:
+            query = "SELECT gamename FROM blackjack_games WHERE gamename = ?"
+            res = cur.execute(query, (msg[-3], ))
 
-        if res.fetchone() is not None:
-            user.send_q.append(msg[3])
+            if res.fetchone() is not None:
+                user.send_q.append(msg[3])
+                con.commit()
+                con.close()
+                return
+
+            data = msg[-4:-1]
+            data.append("1")
+            data.append("1")
+            data = tuple(data)
+            
+            query = "INSERT INTO blackjack_games(username, gamename, game_password, num_players, current_level) VALUES (?, ?, ?, ?, ?)"
+            res = cur.execute(query, data)
+            
+            user.send_q.append(msg[2])
             con.commit()
             con.close()
-            return
-
-        data = msg[-4:-1]
-        data.append("1")
-        data.append("1")
-        data = tuple(data)
-        
-        query = "INSERT INTO blackjack_games(username, gamename, game_password, num_players, current_level) VALUES (?, ?, ?, ?, ?)"
-        res = cur.execute(query, data)
-        
-        user.send_q.append(msg[2])
-        con.commit()
-        con.close()
 
     def handle_existing_connection_read(self, sock):
         try:
@@ -138,7 +139,7 @@ class DB(Server):
                 self.create_account(sock, msg)
 
             elif msg[0] == 'START_GAME_TYPE_0':
-                self.start_game(sock, msg)
+                self.start_game(sock, msg, 0)
 
         except Exception as e:
             print(e)

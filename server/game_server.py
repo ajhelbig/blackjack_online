@@ -59,7 +59,7 @@ class Game_Server(Server):
         ret_val = ret_val.split()
 
         if type == 0 and ret_val[0] == "SUCCESS":
-                #initialize a game and add it to the games dict
+                #TODO initialize a game and add it to the games dict
                 pass
                 
     def handle_existing_connection_read(self, sock):

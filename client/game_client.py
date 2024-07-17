@@ -87,18 +87,19 @@ class Game_Client(Client):
 
     def start_game(self):
         gamename = self.start_menu.get_widget('start game name').get_value().split()
-        gamename = '-'.join(gamename)
+        gamename = '$'.join(gamename)
 
         game_password = self.start_menu.get_widget('start game password').get_value()
         screenname = self.start_menu.get_widget('start screen name').get_value()
         display_msg = ''
 
+        if not game_password:#refactor later
+            game_password = "NULL"
+        if not screenname:#refactor later
+            screenname = "NULL"
+
         if not gamename:
             display_msg = "A blank game name won't work.\nTry again."
-        elif not game_password:#refactor later
-            game_password = "NONE"
-        elif not screenname:#refactor later
-            screenname = "NONE"
         else:
             server_msg = ['START_GAME_TYPE_0', '2', 'SUCCESS', 'BAD_GAME_NAME', self.username, gamename, game_password, screenname]
             server_msg = ' '.join(server_msg)
@@ -109,6 +110,7 @@ class Game_Client(Client):
                 self.current_menu = None
                 self.gamename = gamename
                 self.screenname = screenname
+                self.bg = pygame.image.load('assets/images/bg2.jpg')
                 
             elif ret[0] == "BAD_GAME_NAME":
                 display_msg = 'Sorry that game name is already taken.\nTry again'
@@ -212,6 +214,10 @@ class Game_Client(Client):
                 elif event.type == pygame.WINDOWSIZECHANGED:
                     self.bg = pygame.transform.scale(self.bg, self.window.get_size())
                     self.resize_menus()
+                
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    #TODO implement pause menu
+                    pass
             
             try:
                 if self.current_menu.is_enabled():
