@@ -12,4 +12,4 @@ class User:
         try:
             return self.send_q.pop(0)
         except:
-            return ''
+            return None

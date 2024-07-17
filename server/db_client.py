@@ -1,6 +1,6 @@
 from base.client import Client
 
-class DB_Client(Client): #refactor methods
+class DB_Client(Client): #TODO refactor methods
 
     def __init__(self, s=None):
         super().__init__(s=s)

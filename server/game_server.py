@@ -1,6 +1,6 @@
 import select
 from base.server import Server
-from server.user import User
+from base.user import User
 from server.db_client import DB_Client
 from games.blackjack import *
 
@@ -18,7 +18,7 @@ class Game_Server(Server):
 
         self.server_users = dict()
         self.usernames = dict()
-        self.games = dict()
+        self.active_games = dict()
 
     def handle_new_connection(self, sock):
         client_socket, client_address = sock.accept()
@@ -39,6 +39,7 @@ class Game_Server(Server):
         ret_val = ret_val.split()
 
         if ret_val[0] == 'SUCCESS':
+            #TODO add bank to user
             self.usernames[msg[1]] = user
             user.name = msg[1]
 
@@ -49,6 +50,7 @@ class Game_Server(Server):
         ret_val = ret_val.split()
 
         if ret_val[0] == 'SUCCESS':
+            #TODO add bank to user
             self.usernames[msg[1]] = user
             user.name = msg[1]
 
@@ -105,7 +107,7 @@ class Game_Server(Server):
                     user = self.server_users[id(sock)]
                     msg = user.get_next_msg()
 
-                    if not msg:
+                    if msg is None:
                         pass
                     else:
                         super().send_msg(sock, msg)

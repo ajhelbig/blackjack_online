@@ -93,9 +93,9 @@ class Game_Client(Client):
         screenname = self.start_menu.get_widget('start screen name').get_value()
         display_msg = ''
 
-        if not game_password:#refactor later
+        if not game_password:
             game_password = "NULL"
-        if not screenname:#refactor later
+        if not screenname:
             screenname = "NULL"
 
         if not gamename:
@@ -122,6 +122,7 @@ class Game_Client(Client):
         s = self.start_menu.get_widget('start screen name')
         u.clear()
         p.clear()
+        s.clear()
 
     def sign_in(self):
         username = self.sign_in_menu.get_widget('username').get_value()

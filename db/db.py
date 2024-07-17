@@ -170,7 +170,7 @@ class DB(Server):
                     user = self.db_users[id(sock)]
                     msg = user.get_next_msg()
 
-                    if not msg:
+                    if msg is None:
                         pass
                     else:
                         super().send_msg(sock, msg)
