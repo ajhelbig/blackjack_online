@@ -4,7 +4,11 @@ class User:
     def __init__(self, sock):
         self.sock = sock
         self.id = id(sock)
+
         self.name = None
+        self.game = None
+        self.bank = 0
+
         self.send_q = []
         self.recv_q = []
     

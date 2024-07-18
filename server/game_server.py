@@ -2,7 +2,7 @@ import select
 from base.server import Server
 from base.user import User
 from server.db_client import DB_Client
-from games.blackjack import *
+from server.game import Game
 
 class Game_Server(Server):
 
@@ -34,39 +34,50 @@ class Game_Server(Server):
 
     def sign_in(self, sock, msg):
         user = self.server_users[id(sock)]
-        ret_val = self.db.sign_in(msg)
+        ret_val = self.db.send(msg)
         user.send_q.append(ret_val)
         ret_val = ret_val.split()
 
         if ret_val[0] == 'SUCCESS':
-            #TODO add bank to user
             self.usernames[msg[1]] = user
             user.name = msg[1]
+            user.bank = ret_val[1]
 
     def create_account(self, sock, msg):
         user = self.server_users[id(sock)]
-        ret_val = self.db.create_account(msg)
+        ret_val = self.db.send(msg)
         user.send_q.append(ret_val)
         ret_val = ret_val.split()
 
         if ret_val[0] == 'SUCCESS':
-            #TODO add bank to user
             self.usernames[msg[1]] = user
             user.name = msg[1]
+            user.bank = ret_val[1]
 
     def start_game(self, sock, msg, type):
         user = self.server_users[id(sock)]
-        ret_val = self.db.start_game(msg)
+        ret_val = self.db.send(msg)
         user.send_q.append(ret_val)
         ret_val = ret_val.split()
 
         if type == 0 and ret_val[0] == "SUCCESS":
-                #TODO initialize a game and add it to the games dict
-                pass
-                
+                new_game = Game(name=msg[5])
+                new_game.add_player(user.name, user.bank)
+                self.active_games[new_game.name] = new_game
+
+    def join_game(self, sock, msg, type):
+        user = self.server_users[id(sock)]
+        ret_val = self.db.send(msg)
+        user.send_q.append(ret_val)
+        ret_val = ret_val.split()
+
+        if type == 0 and ret_val[0] == "SUCCESS":
+                join_game = self.active_games[msg[6]]
+                join_game.add_player(user.name, user.bank)
+          
     def handle_existing_connection_read(self, sock):
         try:
-            msg = super().recv_msg(sock).split()
+            msg = self.recv_msg(sock).split()
             print(f"Received data from {sock.getpeername()}: {msg}")
 
             if msg[0] == 'SIGN_IN':
@@ -77,6 +88,9 @@ class Game_Server(Server):
 
             elif msg[0] == 'START_GAME_TYPE_0':
                 self.start_game(sock, ' '.join(msg), 0)
+            
+            elif msg[0] == 'JOIN_GAME_TYPE_0':
+                self.join_game(sock, ' '.join(msg), 0)
 
         except Exception as e:
             print(e)
@@ -110,7 +124,7 @@ class Game_Server(Server):
                     if msg is None:
                         pass
                     else:
-                        super().send_msg(sock, msg)
+                        self.send_msg(sock, msg)
                 except:
                     pass
 
@@ -133,3 +147,5 @@ class Game_Server(Server):
                     sock.close()
 
                 break
+        
+        exit()

@@ -2,11 +2,11 @@ from games.blackjack.hand import *
 
 class Player:
 
-	def __init__(self, bank):
-		self.player_id = str(id(self))
-		self.bet = 0
+	def __init__(self, name, bank):
 		self.bank = bank
-		self.hands = list()
+		self.name = name
+		self.bet = 0
+		self.hands = []
 		self.active_hand = ""
 
 	def get_new_hand(self, deck):

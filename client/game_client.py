@@ -10,7 +10,6 @@ class Game_Client(Client):
 
         self.gamename = str()
         self.username = str()
-        self.screenname = str()
         self.bank = str()
         self.players = list()
         self.player_hands = list()
@@ -50,6 +49,11 @@ class Game_Client(Client):
                                         self.window_size[0] * self.menu_x_scale_factor, 
                                         self.window_size[1] * self.menu_y_scale_factor,
                                         theme=pygame_menu.themes.THEME_DARK)
+        
+        self.pause_menu = pygame_menu.Menu('Pause',
+                                        self.window_size[0] * self.menu_x_scale_factor, 
+                                        self.window_size[1] * self.menu_y_scale_factor,
+                                        theme=pygame_menu.themes.THEME_DARK)
 
         self.sign_in_menu.add.label(title='', label_id='sign in messager', wordwrap=True)
         self.sign_in_menu.add.text_input('Username: ', textinput_id='username')
@@ -69,60 +73,97 @@ class Game_Client(Client):
         self.main_menu.add.button('Join Game', self.join_menu)
         self.main_menu.add.button('Quit', pygame_menu.events.EXIT)
 
-        self.join_menu.add.text_input('Game Name: ')
+        self.join_menu.add.label('', label_id='join game messager')
+        self.join_menu.add.text_input('Game Name: ', textinput_id='join game name')
+        self.join_menu.add.text_input('Optional - Game Password', textinput_id='join game password')
         self.join_menu.add.button('Join', self.join_game)
 
         self.start_menu.add.label(title='', label_id='start game messager', wordwrap=True)
         self.start_menu.add.text_input('Game Name: ', textinput_id='start game name')
         self.start_menu.add.text_input('Optional - Game Password: ', textinput_id='start game password')
-        self.start_menu.add.text_input('Optional - Screen Name: ', textinput_id='start screen name')
         self.start_menu.add.button('Start Game', self.start_game)
 
-        self.menus = [self.sign_in_menu, self.create_account_menu, self.main_menu, self.join_menu, self.start_menu]
+        self.pause_menu.add.button('Resume', self.pause_resume)
+        self.pause_menu.add.button('Quit', pygame_menu.events.EXIT)#TODO sync user with db
+
+        self.menus = [self.sign_in_menu, self.create_account_menu, self.main_menu, self.join_menu, self.start_menu, self.pause_menu]
         self.current_menu = self.sign_in_menu
 
+    def pause_resume(self):
+        self.current_menu = None
+
     def join_game(self):
-        print('join')
-        pass
-
-    def start_game(self):
-        gamename = self.start_menu.get_widget('start game name').get_value().split()
+        gamename = self.join_menu.get_widget('join game name').get_value().split()
         gamename = '$'.join(gamename)
-
-        game_password = self.start_menu.get_widget('start game password').get_value()
-        screenname = self.start_menu.get_widget('start screen name').get_value()
+        game_password = self.join_menu.get_widget('join game password').get_value()
         display_msg = ''
 
         if not game_password:
             game_password = "NULL"
-        if not screenname:
-            screenname = "NULL"
 
         if not gamename:
             display_msg = "A blank game name won't work.\nTry again."
         else:
-            server_msg = ['START_GAME_TYPE_0', '2', 'SUCCESS', 'BAD_GAME_NAME', self.username, gamename, game_password, screenname]
+            server_msg = ['JOIN_GAME_TYPE_0', '4', 'SUCCESS', 'BAD_GAME_NAME', 'BAD_GAME_PSWD', 'GAME_FULL', self.username, gamename, game_password]
             server_msg = ' '.join(server_msg)
             self.send_q.append(server_msg)
-            ret = self.await_msg(server_msg).split()
+            ret_val = self.await_msg(server_msg).split()
 
-            if ret[0] == "SUCCESS":
+            if ret_val[0] == 'SUCCESS':
                 self.current_menu = None
                 self.gamename = gamename
-                self.screenname = screenname
                 self.bg = pygame.image.load('assets/images/bg2.jpg')
+                self.bg = pygame.transform.scale(self.bg, self.window_size)
+
+            elif ret_val[0] == 'BAD_GAME_NAME':
+                display_msg = "That game does not exist.\nTry again."
+
+            elif ret_val[0] == 'BAD_GAME_PSWD':
+                display_msg = 'That was the wrong password.\nTry again.'
+
+            elif ret_val[0] == 'GAME_FULL':
+                display_msg = "You can't join right now the game is full."
+
+
+        label = self.join_menu.get_widget('join game messager')
+        label.set_title(display_msg)
+        u = self.join_menu.get_widget('join game name')
+        p = self.join_menu.get_widget('join game password')
+        u.clear()
+        p.clear()
+
+    def start_game(self):
+        gamename = self.start_menu.get_widget('start game name').get_value().split()
+        gamename = '$'.join(gamename)
+        game_password = self.start_menu.get_widget('start game password').get_value()
+        display_msg = ''
+
+        if not game_password:
+            game_password = "NULL"
+
+        if not gamename:
+            display_msg = "A blank game name won't work.\nTry again."
+        else:
+            server_msg = ['START_GAME_TYPE_0', '2', 'SUCCESS', 'BAD_GAME_NAME', self.username, gamename, game_password]
+            server_msg = ' '.join(server_msg)
+            self.send_q.append(server_msg)
+            ret_val = self.await_msg(server_msg).split()
+
+            if ret_val[0] == "SUCCESS":
+                self.current_menu = None
+                self.gamename = gamename
+                self.bg = pygame.image.load('assets/images/bg2.jpg')
+                self.bg = pygame.transform.scale(self.bg, self.window_size)
                 
-            elif ret[0] == "BAD_GAME_NAME":
+            elif ret_val[0] == "BAD_GAME_NAME":
                 display_msg = 'Sorry that game name is already taken.\nTry again'
 
         label = self.start_menu.get_widget('start game messager')
         label.set_title(display_msg)
         u = self.start_menu.get_widget('start game name')
         p = self.start_menu.get_widget('start game password')
-        s = self.start_menu.get_widget('start screen name')
         u.clear()
         p.clear()
-        s.clear()
 
     def sign_in(self):
         username = self.sign_in_menu.get_widget('username').get_value()
@@ -136,17 +177,16 @@ class Game_Client(Client):
             server_msg = ['SIGN_IN', '3', 'SUCCESS', 'BAD_USER', 'BAD_PSWD', username, password]
             server_msg = ' '.join(server_msg)
             self.send_q.append(server_msg)
-            ret = self.await_msg(server_msg).split()
+            ret_val = self.await_msg(server_msg).split()
 
-            if ret[0] == "SUCCESS":
+            if ret_val[0] == "SUCCESS":
                 self.username = username
-                self.bank = int(ret[1])
-                print(f'username {self.username}, bank {self.bank}')
+                self.bank = int(ret_val[1])
                 self.current_menu = self.main_menu
                 return
-            elif ret[0] == "BAD_USER":
+            elif ret_val[0] == "BAD_USER":
                 display_msg = 'There is no account with that username.\nTry creating an account.'
-            elif ret[0] == "BAD_PSWD":
+            elif ret_val[0] == "BAD_PSWD":
                 display_msg = 'That was not the right password'
             
         label = self.sign_in_menu.get_widget('sign in messager')
@@ -173,12 +213,12 @@ class Game_Client(Client):
             server_msg = ['CREATE_ACCOUNT', '2', 'SUCCESS', 'USER_TAKEN', username, password1, email]
             server_msg = ' '.join(server_msg)
             self.send_q.append(server_msg)
-            ret = self.await_msg(server_msg).split()
+            ret_val = self.await_msg(server_msg).split()
 
-            if ret[0] == "SUCCESS":
+            if ret_val[0] == "SUCCESS":
                 self.username = username
                 self.current_menu = self.main_menu
-            elif ret[0] == "USER_TAKEN":
+            elif ret_val[0] == "USER_TAKEN":
                 display_msg = 'That username is already taken.\nTry again.'
 
         label = self.create_account_menu.get_widget('create account messager')
@@ -217,8 +257,7 @@ class Game_Client(Client):
                     self.resize_menus()
                 
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    #TODO implement pause menu
-                    pass
+                    self.current_menu = self.pause_menu
             
             try:
                 if self.current_menu.is_enabled():
@@ -231,6 +270,7 @@ class Game_Client(Client):
 
         #store state in db before exiting
         pygame.quit()
+        exit()
 
     def start(self):
         super().start()

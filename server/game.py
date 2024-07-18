@@ -1,11 +1,13 @@
+from games.blackjack.player import Player
 
 class Game:
 
-    def __init__(self, server):
-
-        self.game_id = id(self)
-        self.potential_readers = []
-        self.potential_writers = []
-        self.potential_errors = []
-        self.timeout = 1
+    def __init__(self, name):
+        self.name = name
+        self.players = []
         self.num_players = 0
+
+    def add_player(self, username, bank):
+        new_player = Player(username, bank)
+        self.players.append(new_player)
+        self.num_players += 1

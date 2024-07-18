@@ -49,7 +49,7 @@ class DB(Server):
         user = self.db_users[id(sock)]
 
         query = "SELECT username FROM users WHERE username = ?"
-        res = cur.execute(query, (msg[-2], ))
+        res = cur.execute(query, (msg[5], ))
 
         if res.fetchone() is None:
             user.send_q.append(msg[3])
@@ -58,7 +58,7 @@ class DB(Server):
             return
         
         query = "SELECT username FROM users WHERE username = ? AND password = ?"
-        res = cur.execute(query, (msg[-2], msg[-1]))
+        res = cur.execute(query, (msg[5], msg[6]))
 
         if res.fetchone() is None:
             user.send_q.append(msg[4])
@@ -67,7 +67,7 @@ class DB(Server):
             return
         
         query = "SELECT bank FROM users WHERE username = ?"
-        res = cur.execute(query, (msg[-2], ))
+        res = cur.execute(query, (msg[5], ))
 
         resp_msg = msg[2] + ' ' + res.fetchone()[0]
         
@@ -81,7 +81,7 @@ class DB(Server):
         user = self.db_users[id(sock)]
 
         query = "SELECT username FROM users WHERE username = ?"
-        res = cur.execute(query, (msg[-3], ))
+        res = cur.execute(query, (msg[4], ))
 
         if res.fetchone() is not None:
             user.send_q.append(msg[3])
@@ -89,14 +89,16 @@ class DB(Server):
             con.close()
             return
 
-        data = msg[-3:]
+        data = msg[4:]
         data.append("0")
         data = tuple(data)
         
         query = "INSERT INTO users(username, password, email, bank) VALUES (?, ?, ?, ?)"
         res = cur.execute(query, data)
+
+        resp_msg = msg[2] + " " + data[5]
         
-        user.send_q.append(msg[2])
+        user.send_q.append(resp_msg)
         con.commit()
         con.close()
 
@@ -107,7 +109,7 @@ class DB(Server):
 
         if type == 0:
             query = "SELECT gamename FROM blackjack_games WHERE gamename = ?"
-            res = cur.execute(query, (msg[-3], ))
+            res = cur.execute(query, (msg[5], ))
 
             if res.fetchone() is not None:
                 user.send_q.append(msg[3])
@@ -115,13 +117,61 @@ class DB(Server):
                 con.close()
                 return
 
-            data = msg[-4:-1]
+            data = msg[4:]
             data.append("1")
             data.append("1")
             data = tuple(data)
             
             query = "INSERT INTO blackjack_games(username, gamename, game_password, num_players, current_level) VALUES (?, ?, ?, ?, ?)"
             res = cur.execute(query, data)
+            
+            user.send_q.append(msg[2])
+            con.commit()
+            con.close()
+
+    def join_game(self, sock, msg, type):
+        con = sqlite3.connect(database=self.db_name, autocommit=self.db_autocommit)
+        cur = con.cursor()
+        user = self.db_users[id(sock)]
+
+        if type == 0:
+            query = "SELECT gamename FROM blackjack_games WHERE gamename = ?"
+            res = cur.execute(query, (msg[7], ))
+
+            if res.fetchone() is not None:
+                user.send_q.append(msg[3])
+                con.commit()
+                con.close()
+                return
+            
+            query = "SELECT game_password FROM blackjack_games WHERE gamename = ?"
+            res = cur.execute(query, (msg[7]))
+
+            password = res.fetchone()[0]
+
+            if password != "NULL":
+                query = "SELECT gamename FROM blackjack_games WHERE gamename = ? AND game_password = ?"
+                res = cur.execute(query, (msg[7], msg[8]))
+
+                if res.fetchone() is not None:
+                    user.send_q.append(msg[4])
+                    con.commit()
+                    con.close()
+                    return
+
+            query = "SELECT num_players FROM blackjack_games WHERE gamename = ?"
+            res = cur.execute(query, (msg[7]))
+
+            new_num_players = res.fetchone()[0] + 1
+
+            if new_num_players > 7:
+                user.send_q.append(msg[5])
+                con.commit()
+                con.close()
+                return
+            
+            query = "INSERT INTO blackjack_games(num_players) VALUES (?)"
+            res = cur.execute(query, new_num_players)
             
             user.send_q.append(msg[2])
             con.commit()
@@ -140,6 +190,9 @@ class DB(Server):
 
             elif msg[0] == 'START_GAME_TYPE_0':
                 self.start_game(sock, msg, 0)
+
+            elif msg[0] == 'JOIN_GAME_TYPE_0':
+                self.join_game(sock, msg, 0)
 
         except Exception as e:
             print(e)
