@@ -34,46 +34,54 @@ class Game_Server(Server):
 
     def sign_in(self, sock, msg):
         user = self.server_users[id(sock)]
-        ret_val = self.db.send(msg)
+        ret_val = self.db.send(' '.join(msg))
         user.send_q.append(ret_val)
         ret_val = ret_val.split()
 
         if ret_val[0] == 'SUCCESS':
-            self.usernames[msg[1]] = user
-            user.name = msg[1]
+            self.usernames[msg[5]] = user
+            user.name = msg[5]
             user.bank = ret_val[1]
 
     def create_account(self, sock, msg):
         user = self.server_users[id(sock)]
-        ret_val = self.db.send(msg)
+        ret_val = self.db.send(' '.join(msg))
         user.send_q.append(ret_val)
         ret_val = ret_val.split()
 
         if ret_val[0] == 'SUCCESS':
-            self.usernames[msg[1]] = user
-            user.name = msg[1]
+            self.usernames[msg[4]] = user
+            user.name = msg[4]
             user.bank = ret_val[1]
 
     def start_game(self, sock, msg, type):
         user = self.server_users[id(sock)]
-        ret_val = self.db.send(msg)
+        ret_val = self.db.send(' '.join(msg))
         user.send_q.append(ret_val)
         ret_val = ret_val.split()
 
         if type == 0 and ret_val[0] == "SUCCESS":
-                new_game = Game(name=msg[5])
+                new_game = Game(msg[5])
                 new_game.add_player(user.name, user.bank)
-                self.active_games[new_game.name] = new_game
+                self.active_games[msg[5]] = new_game
 
     def join_game(self, sock, msg, type):
         user = self.server_users[id(sock)]
-        ret_val = self.db.send(msg)
+        ret_val = self.db.send(' '.join(msg))
         user.send_q.append(ret_val)
         ret_val = ret_val.split()
 
         if type == 0 and ret_val[0] == "SUCCESS":
-                join_game = self.active_games[msg[6]]
-                join_game.add_player(user.name, user.bank)
+            try:
+                game = self.active_games[msg[7]]
+                game.add_player(user.name, user.bank)
+            except KeyError:
+                game = Game(msg[7])
+                game.add_player(user.name, user.bank)
+                game.load_blackjack_game(ret_val[1], ret_val[2])
+
+    def leave_game(self, sock, msg, type):
+        pass
           
     def handle_existing_connection_read(self, sock):
         try:
@@ -81,19 +89,22 @@ class Game_Server(Server):
             print(f"Received data from {sock.getpeername()}: {msg}")
 
             if msg[0] == 'SIGN_IN':
-                self.sign_in(sock, ' '.join(msg))
+                self.sign_in(sock, msg)
 
             elif msg[0] == 'CREATE_ACCOUNT':
-                self.create_account(sock, ' '.join(msg))
+                self.create_account(sock, msg)
 
             elif msg[0] == 'START_GAME_TYPE_0':
-                self.start_game(sock, ' '.join(msg), 0)
+                self.start_game(sock, msg, 0)
             
             elif msg[0] == 'JOIN_GAME_TYPE_0':
-                self.join_game(sock, ' '.join(msg), 0)
+                self.join_game(sock, msg, 0)
+
+            elif msg[0] == 'LEAVE_GAME_TYPE_0':
+                self.leave_game(sock, msg, 0)
 
         except Exception as e:
-            print(e)
+            print(f"error: {e}")
             print(f"Client {sock.getpeername()} disconnected")
             sock.close()
             self.potential_server_readers.remove(sock)

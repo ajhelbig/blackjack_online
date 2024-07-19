@@ -14,10 +14,11 @@ class Game_Client(Client):
         self.players = list()
         self.player_hands = list()
         self.dealer_hands = list()
+        self.active_game = False
 
-        self.window_size = (1200, 800)
-        self.menu_x_scale_factor = 0.5
-        self.menu_y_scale_factor = 0.5
+        self.window_size = (1400, 1000)
+        self.menu_x_scale_factor = 0.65
+        self.menu_y_scale_factor = 0.65
         self.bg = pygame.image.load('assets/images/bg.png')
         self.bg = pygame.transform.scale(self.bg, self.window_size)
 
@@ -75,7 +76,7 @@ class Game_Client(Client):
 
         self.join_menu.add.label('', label_id='join game messager')
         self.join_menu.add.text_input('Game Name: ', textinput_id='join game name')
-        self.join_menu.add.text_input('Optional - Game Password', textinput_id='join game password')
+        self.join_menu.add.text_input('Optional - Game Password: ', textinput_id='join game password')
         self.join_menu.add.button('Join', self.join_game)
 
         self.start_menu.add.label(title='', label_id='start game messager', wordwrap=True)
@@ -91,6 +92,9 @@ class Game_Client(Client):
 
     def pause_resume(self):
         self.current_menu = None
+
+    def pause_quit(self):
+        pass
 
     def join_game(self):
         gamename = self.join_menu.get_widget('join game name').get_value().split()
@@ -123,7 +127,6 @@ class Game_Client(Client):
 
             elif ret_val[0] == 'GAME_FULL':
                 display_msg = "You can't join right now the game is full."
-
 
         label = self.join_menu.get_widget('join game messager')
         label.set_title(display_msg)
