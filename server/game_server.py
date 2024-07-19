@@ -61,9 +61,13 @@ class Game_Server(Server):
         ret_val = ret_val.split()
 
         if type == 0 and ret_val[0] == "SUCCESS":
-                new_game = Game(msg[5])
+                gamename = msg[5]
+                level = ret_val[1]
+                house_bank = ret_val[2]
+        
+                new_game = Game(gamename, level=level, house_bank=house_bank)
                 new_game.add_player(user.name, user.bank)
-                self.active_games[msg[5]] = new_game
+                self.active_games[gamename] = new_game
 
     def join_game(self, sock, msg, type):
         user = self.server_users[id(sock)]
@@ -76,12 +80,29 @@ class Game_Server(Server):
                 game = self.active_games[msg[7]]
                 game.add_player(user.name, user.bank)
             except KeyError:
-                game = Game(msg[7])
+                game = Game(name=msg[7], level=ret_val[1], house_bank=ret_val[2])
                 game.add_player(user.name, user.bank)
                 game.load_blackjack_game(ret_val[1], ret_val[2])
+                self.active_games[msg[7]] = game
 
     def leave_game(self, sock, msg, type):
-        pass
+        gamename = msg[5]
+        game = self.active_games[gamename]
+
+        if game.num_players - 1 == 0:
+            msg += [str(game.level), str(game.house_bank)]
+
+        user = self.server_users[id(sock)]
+        ret_val = self.db.send(' '.join(msg))
+        user.send_q.append(ret_val)
+        ret_val = ret_val.split()
+
+        if type == 0 and ret_val[0] == "SUCCESS":
+                game = self.active_games[gamename]
+                game.remove_player(user.name)
+                
+                if game.num_players == 0:
+                    del self.active_games[gamename]
           
     def handle_existing_connection_read(self, sock):
         try:

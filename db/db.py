@@ -117,15 +117,20 @@ class DB(Server):
                 con.close()
                 return
 
-            data = msg[4:]
-            data.append("1")
-            data.append("1")
+            data = msg[4:]#username, gamename, password
+            data.append("1")#number of players
+            data.append("1")#level
+            data.append("1000")#house bank
             data = tuple(data)
             
-            query = "INSERT INTO blackjack_games(username, gamename, game_password, num_players, current_level) VALUES (?, ?, ?, ?, ?)"
+            query = "INSERT INTO blackjack_games(username, gamename, game_password, num_players, current_level, house_bank) VALUES (?, ?, ?, ?, ?, ?)"
             res = cur.execute(query, data)
+
+            final_msg = msg[2] + ' ' + ' '.join(data[4:])
+
+            print(final_msg)
             
-            user.send_q.append(msg[2])
+            user.send_q.append(final_msg)
             con.commit()
             con.close()
 
@@ -157,7 +162,6 @@ class DB(Server):
             res = cur.execute(query, (msg[7], ))
 
             new_num_players = int(res.fetchone()[0]) + 1
-
             print(new_num_players)
 
             if new_num_players > 7:
@@ -166,17 +170,40 @@ class DB(Server):
                 con.close()
                 return
             
-            query = "INSERT INTO blackjack_games(num_players) VALUES (?)"
-            res = cur.execute(query, str(new_num_players))
+            query = "UPDATE blackjack_games SET num_players = ? WHERE gamename = ?"
+            res = cur.execute(query, (str(new_num_players), msg[7]))
             
-            #TODO return house bank and current level
-            user.send_q.append(msg[2])
+            query = "SELECT current_level, house_bank FROM blackjack_games WHERE gamename = ?"
+            res = cur.execute(query, (msg[7], ))
+            data = res.fetchone()
+
+            user.send_q.append(msg[2] + " " + ' '.join(data))
             con.commit()
             con.close()
 
     def leave_game(self, sock, msg, type):
-        #TODO decrement num_players update house bank if last player to leave
-        pass
+        con = sqlite3.connect(database=self.db_name, autocommit=self.db_autocommit)
+        cur = con.cursor()
+        user = self.db_users[id(sock)]
+
+        query = "SELECT num_players FROM blackjack_games WHERE gamename = ?"
+        res = cur.execute(query, (msg[5], ))
+
+        num_players = res.fetchone()[0]
+
+        if int(num_players) - 1 == 0:
+            query = "UPDATE blackjack_games SET current_level = ? WHERE gamename = ?"
+            res = cur.execute(query, (msg[6], msg[5]))
+
+            query = "UPDATE blackjack_games SET house_bank = ? WHERE gamename = ?"
+            res = cur.execute(query, (msg[7], msg[5]))
+
+        query = "UPDATE blackjack_games SET num_players = ? WHERE gamename = ?"
+        res = cur.execute(query, (str(num_players - 1), msg[5]))
+
+        user.send_q.append("SUCCESS")#TODO catch errors and return false
+        con.commit()
+        con.close()
 
     def handle_existing_connection_read(self, sock):
         try:
@@ -209,7 +236,6 @@ class DB(Server):
 
             self.num_connections -= 1
             print(f"Number of connected clients: {self.num_connections}")
-
 
     def handle_ready_to_read(self, ready_to_read):
         for sock in ready_to_read:
