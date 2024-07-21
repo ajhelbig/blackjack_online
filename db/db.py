@@ -44,8 +44,9 @@ class DB(Server):
         success = msg[2]
         bad_username = msg[3]
         bad_password = msg[4]
-        username = msg[5]
-        password = msg[6]
+        dup_sign_in = msg[5]
+        username = msg[6]
+        password = msg[7]
 
         query = "SELECT username FROM users WHERE username = ?"
         res = cur.execute(query, (username, ))

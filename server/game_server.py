@@ -34,13 +34,16 @@ class Game_Server(Server):
 
     def sign_in(self, sock, msg):
         user = self.server_users[id(sock)]
+        username = msg[6]
+
+        if username in self.usernames:
+            user.send_q.append(msg[5])
+        
         ret_val = self.db.send(' '.join(msg))
         user.send_q.append(ret_val)
         ret_val = ret_val.split()
 
         if ret_val[0] == 'SUCCESS':
-            username = msg[5]
-
             self.usernames[username] = user
             user.name = username
 
@@ -65,15 +68,15 @@ class Game_Server(Server):
         success = msg[2]
         bad_game_name = msg[3]
 
-        try:
+        if gamename in self.active_games:
+            user.send_q.append(bad_game_name)
+        else:
             new_game = Game(gamename, game_password)
             new_game.add_player(user.name)
             self.active_games[gamename] = new_game
             user.add_game(new_game)
 
             user.send_q.append(success)
-        except:
-            user.send_q.append(bad_game_name)
 
     def join_game(self, sock, msg):
         user = self.server_users[id(sock)]
@@ -86,26 +89,24 @@ class Game_Server(Server):
         gamename = msg[7]
         game_password = msg[8]
 
-        game = None
-
         try:
             game = self.active_games[gamename]
+        
+            if game.bad_password(game_password) :
+                user.send_q.append(bad_game_password)
+                return
+
+            elif not game.add_player(user.name):
+                user.send_q.append(game_full)
+                return
+        
+            user.add_game(game)
+            user.send_q.append(success)
         except:
             user.send_q.append(bad_game_name)
             return
-        
-        if game.bad_password(game_password) :
-            user.send_q.append(bad_game_password)
-            return
-        
-        if not game.add_player(user.name):
-            user.send_q.append(game_full)
-            return
-        
-        user.add_game(game)
-        user.send_q.append(success)
 
-    def leave_game(self, sock, msg):
+    def leave_game(self, sock):
         user = self.server_users[id(sock)]
         self.remove_user_from_game(user)
 
@@ -135,7 +136,7 @@ class Game_Server(Server):
                 self.join_game(sock, msg)
 
             elif msg[0] == 'LEAVE_GAME':
-                self.leave_game(sock, msg)
+                self.leave_game(sock)
 
         except Exception as e:
             print(f"error: {e}")
@@ -147,8 +148,10 @@ class Game_Server(Server):
             
             if user.in_game:
                 self.remove_user_from_game(user)
-            
-            del self.usernames[user.name]
+
+            if user.name is not None:
+                del self.usernames[user.name]
+
             del self.server_users[id(sock)]
 
             self.num_connections -= 1

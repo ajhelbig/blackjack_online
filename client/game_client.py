@@ -14,7 +14,6 @@ class Game_Client(Client):
         self.players = list()
         self.player_hands = list()
         self.dealer_hands = list()
-        self.active_game = False
 
         self.window_size = (1400, 1000)
         self.menu_x_scale_factor = 0.65
@@ -106,17 +105,21 @@ class Game_Client(Client):
             display_msg = "A blank username or password won't work.\nTry again."
 
         else:
-            ret_val = self.make_transaction(['SIGN_IN', '3', 'SUCCESS', 'BAD_USER', 'BAD_PSWD', username, password])
+            ret_val = self.make_transaction(['SIGN_IN', '4', 'SUCCESS', 'BAD_USER', 'BAD_PSWD', 'DUP_SIGN_IN', username, password])
 
             if ret_val[0] == "SUCCESS":
                 self.username = username
                 self.bank = 0
                 self.current_menu = self.main_menu
-                return
+
             elif ret_val[0] == "BAD_USER":
                 display_msg = 'There is no account with that username.\nTry creating an account.'
+
             elif ret_val[0] == "BAD_PSWD":
-                display_msg = 'That was not the right password'
+                display_msg = 'That was not the right password.'
+
+            elif ret_val[0] == "DUP_SIGN_IN":
+                display_msg = "You are already signed in."
             
         label = self.sign_in_menu.get_widget('sign in messager')
         label.set_title(display_msg)
@@ -146,6 +149,7 @@ class Game_Client(Client):
             if ret_val[0] == "SUCCESS":
                 self.username = username
                 self.current_menu = self.main_menu
+
             elif ret_val[0] == "USER_TAKEN":
                 display_msg = 'That username is already taken.\nTry again.'
 
@@ -176,10 +180,9 @@ class Game_Client(Client):
             if ret_val[0] == "SUCCESS":
                 self.current_menu = None
                 self.gamename = gamename
-                self.active_game = True
                 self.bg = pygame.image.load('assets/images/game_bg.jpg')
                 self.bg = pygame.transform.scale(self.bg, self.window_size)
-                
+
             elif ret_val[0] == "BAD_GAME_NAME":
                 display_msg = 'Sorry that game name is already taken.\nTry again'
 
@@ -210,7 +213,6 @@ class Game_Client(Client):
                 self.gamename = gamename
                 self.bg = pygame.image.load('assets/images/game_bg.jpg')
                 self.bg = pygame.transform.scale(self.bg, self.window_size)
-                self.active_game = True
 
             elif ret_val[0] == 'BAD_GAME_NAME':
                 display_msg = "That game does not exist.\nTry again."
@@ -233,7 +235,6 @@ class Game_Client(Client):
 
         if ret_val[0] == 'SUCCESS':
             self.current_menu = self.main_menu
-            self.active_game = False
             self.gamename = None
 
             self.bg = pygame.image.load('assets/images/menu_bg.jpg')
@@ -280,7 +281,7 @@ class Game_Client(Client):
 
             pygame.display.update()
 
-        #store state in db before exiting
+        #TODO store state before exiting
         pygame.quit()
         exit()
 

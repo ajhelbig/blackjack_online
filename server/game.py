@@ -28,5 +28,5 @@ class Game:
         return True
 
     def remove_player(self, username):
-        del self.player[username]
+        del self.players[username]
         self.num_players -= 1
