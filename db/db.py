@@ -12,25 +12,18 @@ class DB(Server):
 
         self.num_connections = 0
         self.db_name = 'game.db'
-        self.db_autocommit = False
 
-        con = sqlite3.connect(database=self.db_name, autocommit=self.db_autocommit)
+        con = sqlite3.connect(database=self.db_name, )
         cur = con.cursor()
 
         if cur.execute("SELECT name FROM sqlite_master WHERE name='users'").fetchone() is None:
             self.create_users_table(cur)
 
-        if cur.execute("SELECT name FROM sqlite_master WHERE name='blackjack_games'").fetchone() is None:
-            self.create_games_table(cur)
-
         con.commit()
         con.close()
 
     def create_users_table(self, cur):
-        cur.execute('CREATE TABLE users(username, password, email, bank)')
-
-    def create_games_table(self, cur):
-        cur.execute('CREATE TABLE blackjack_games(username, gamename, game_password, num_players, current_level, house_bank, deck)')
+        cur.execute('CREATE TABLE users(username, password)')
 
     def handle_new_connection(self, sock):
         client_socket, _ = sock.accept()
@@ -44,164 +37,64 @@ class DB(Server):
         print(f"Number of connected clients: {self.num_connections}")
 
     def sign_in(self, sock, msg):
-        con = sqlite3.connect(database=self.db_name, autocommit=self.db_autocommit)
+        con = sqlite3.connect(database=self.db_name)
         cur = con.cursor()
         user = self.db_users[id(sock)]
 
+        success = msg[2]
+        bad_username = msg[3]
+        bad_password = msg[4]
+        username = msg[5]
+        password = msg[6]
+
         query = "SELECT username FROM users WHERE username = ?"
-        res = cur.execute(query, (msg[5], ))
+        res = cur.execute(query, (username, ))
 
         if res.fetchone() is None:
-            user.send_q.append(msg[3])
+            user.send_q.append(bad_username)
             con.commit()
             con.close()
             return
         
         query = "SELECT username FROM users WHERE username = ? AND password = ?"
-        res = cur.execute(query, (msg[5], msg[6]))
+        res = cur.execute(query, (username, password))
 
         if res.fetchone() is None:
-            user.send_q.append(msg[4])
+            user.send_q.append(bad_password)
             con.commit()
             con.close()
             return
         
-        query = "SELECT bank FROM users WHERE username = ?"
-        res = cur.execute(query, (msg[5], ))
-
-        resp_msg = msg[2] + ' ' + res.fetchone()[0]
-        
-        user.send_q.append(resp_msg)
+        user.send_q.append(success)
         con.commit()
         con.close()
 
     def create_account(self, sock, msg):
-        con = sqlite3.connect(database=self.db_name, autocommit=self.db_autocommit)
+        con = sqlite3.connect(database=self.db_name)
         cur = con.cursor()
         user = self.db_users[id(sock)]
+        
+        success = msg[2]
+        username_taken = msg[3]
+        username = msg[4]
+        password = msg[5]
 
         query = "SELECT username FROM users WHERE username = ?"
-        res = cur.execute(query, (msg[4], ))
+        res = cur.execute(query, (username, ))
 
         if res.fetchone() is not None:
-            user.send_q.append(msg[3])
+            user.send_q.append(username_taken)
             con.commit()
             con.close()
             return
 
-        data = msg[4:]
-        data.append("0")
-        data = tuple(data)
+        username_and_password = [username, password]
+        username_and_password = tuple(username_and_password)
         
-        query = "INSERT INTO users(username, password, email, bank) VALUES (?, ?, ?, ?)"
-        res = cur.execute(query, data)
-
-        resp_msg = msg[2] + " " + data[3]
+        query = "INSERT INTO users(username, password) VALUES (?, ?)"
+        res = cur.execute(query, username_and_password)
         
-        user.send_q.append(resp_msg)
-        con.commit()
-        con.close()
-
-    def start_game(self, sock, msg, type):
-        con = sqlite3.connect(database=self.db_name, autocommit=self.db_autocommit)
-        cur = con.cursor()
-        user = self.db_users[id(sock)]
-
-        if type == 0:
-            query = "SELECT gamename FROM blackjack_games WHERE gamename = ?"
-            res = cur.execute(query, (msg[5], ))
-
-            if res.fetchone() is not None:
-                user.send_q.append(msg[3])
-                con.commit()
-                con.close()
-                return
-
-            data = msg[4:]#username, gamename, password
-            data.append("1")#number of players
-            data.append("1")#level
-            data.append("1000")#house bank
-            data = tuple(data)
-            
-            query = "INSERT INTO blackjack_games(username, gamename, game_password, num_players, current_level, house_bank) VALUES (?, ?, ?, ?, ?, ?)"
-            res = cur.execute(query, data)
-
-            final_msg = msg[2] + ' ' + ' '.join(data[4:])
-
-            print(final_msg)
-            
-            user.send_q.append(final_msg)
-            con.commit()
-            con.close()
-
-    def join_game(self, sock, msg, type):
-        con = sqlite3.connect(database=self.db_name, autocommit=self.db_autocommit)
-        cur = con.cursor()
-        user = self.db_users[id(sock)]
-
-        if type == 0:
-            query = "SELECT game_password FROM blackjack_games WHERE gamename = ?"
-            res = cur.execute(query, (msg[7], ))
-            password = res.fetchone()
-
-            if password is None:
-                    user.send_q.append(msg[3])
-                    con.commit()
-                    con.close()
-                    return
-
-            password = password[0]
-
-            if password != "NULL" and password != msg[8]:
-                    user.send_q.append(msg[4])
-                    con.commit()
-                    con.close()
-                    return
-
-            query = "SELECT num_players FROM blackjack_games WHERE gamename = ?"
-            res = cur.execute(query, (msg[7], ))
-
-            new_num_players = int(res.fetchone()[0]) + 1
-            print(new_num_players)
-
-            if new_num_players > 7:
-                user.send_q.append(msg[5])
-                con.commit()
-                con.close()
-                return
-            
-            query = "UPDATE blackjack_games SET num_players = ? WHERE gamename = ?"
-            res = cur.execute(query, (str(new_num_players), msg[7]))
-            
-            query = "SELECT current_level, house_bank FROM blackjack_games WHERE gamename = ?"
-            res = cur.execute(query, (msg[7], ))
-            data = res.fetchone()
-
-            user.send_q.append(msg[2] + " " + ' '.join(data))
-            con.commit()
-            con.close()
-
-    def leave_game(self, sock, msg, type):
-        con = sqlite3.connect(database=self.db_name, autocommit=self.db_autocommit)
-        cur = con.cursor()
-        user = self.db_users[id(sock)]
-
-        query = "SELECT num_players FROM blackjack_games WHERE gamename = ?"
-        res = cur.execute(query, (msg[5], ))
-
-        num_players = res.fetchone()[0]
-
-        if int(num_players) - 1 == 0:
-            query = "UPDATE blackjack_games SET current_level = ? WHERE gamename = ?"
-            res = cur.execute(query, (msg[6], msg[5]))
-
-            query = "UPDATE blackjack_games SET house_bank = ? WHERE gamename = ?"
-            res = cur.execute(query, (msg[7], msg[5]))
-
-        query = "UPDATE blackjack_games SET num_players = ? WHERE gamename = ?"
-        res = cur.execute(query, (str(num_players - 1), msg[5]))
-
-        user.send_q.append("SUCCESS")#TODO catch errors and return false
+        user.send_q.append(success)
         con.commit()
         con.close()
 
@@ -215,15 +108,6 @@ class DB(Server):
 
             elif msg[0] == 'CREATE_ACCOUNT':
                 self.create_account(sock, msg)
-
-            elif msg[0] == 'START_GAME_TYPE_0':
-                self.start_game(sock, msg, 0)
-
-            elif msg[0] == 'JOIN_GAME_TYPE_0':
-                self.join_game(sock, msg, 0)
-
-            elif msg[0] == 'LEAVE_GAME_TYPE_0':
-                self.leave_game(sock, msg, 0)
 
         except Exception as e:
             print(e)

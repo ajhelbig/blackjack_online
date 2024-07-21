@@ -61,11 +61,9 @@ class Game_Client(Client):
         self.sign_in_menu.add.text_input('Password: ', textinput_id='password', password=True)
         self.sign_in_menu.add.button('Sign In', self.sign_in)
         self.sign_in_menu.add.button('Create Account', self.create_account_menu)
-        self.sign_in_menu.add.button('Forgot Password', None)# implement account recovery later
 
         self.create_account_menu.add.label(title='', label_id='create account messager', wordwrap=True)
         self.create_account_menu.add.text_input('Username: ', textinput_id='create account username')
-        self.create_account_menu.add.text_input('Recovery Email: ', textinput_id='create account email')
         self.create_account_menu.add.text_input('Password: ', textinput_id='create account 1st password')
         self.create_account_menu.add.text_input('Password: ', textinput_id='create account 2nd password')
         self.create_account_menu.add.button('Create Account', self.create_account)
@@ -99,7 +97,9 @@ class Game_Client(Client):
 
     def sign_in(self):
         username = self.sign_in_menu.get_widget('username').get_value()
+        username = '$'.join(username)
         password = self.sign_in_menu.get_widget('password').get_value()
+        password = '$'.join(password)
         display_msg = ''
 
         if not username or not password:
@@ -110,7 +110,7 @@ class Game_Client(Client):
 
             if ret_val[0] == "SUCCESS":
                 self.username = username
-                self.bank = int(ret_val[1])
+                self.bank = 0
                 self.current_menu = self.main_menu
                 return
             elif ret_val[0] == "BAD_USER":
@@ -127,19 +127,21 @@ class Game_Client(Client):
 
     def create_account(self):
         username = self.create_account_menu.get_widget('create account username').get_value()
-        email = self.create_account_menu.get_widget('create account email').get_value()
+        username = '$'.join(username)
         password1 = self.create_account_menu.get_widget('create account 1st password').get_value()
+        password1 = '$'.join(password1)
         password2 = self.create_account_menu.get_widget('create account 2nd password').get_value()
+        password2 = '$'.join(password2)
         display_msg = ''
 
-        if not username or not email or not password1 or not password2:
+        if not username or not password1 or not password2:
             display_msg = 'You must fill out all the text fields.'
 
         elif password1 != password2:
             display_msg = 'Both passwords must be the same.'
 
         else:
-            ret_val = self.make_transaction(['CREATE_ACCOUNT', '2', 'SUCCESS', 'USER_TAKEN', username, password1, email])
+            ret_val = self.make_transaction(['CREATE_ACCOUNT', '2', 'SUCCESS', 'USER_TAKEN', username, password1])
 
             if ret_val[0] == "SUCCESS":
                 self.username = username
@@ -150,11 +152,9 @@ class Game_Client(Client):
         label = self.create_account_menu.get_widget('create account messager')
         label.set_title(display_msg)
         u = self.create_account_menu.get_widget('create account username')
-        e = self.create_account_menu.get_widget('create account email')
         p1 = self.create_account_menu.get_widget('create account 1st password')
         p2 = self.create_account_menu.get_widget('create account 2nd password')
         u.clear()
-        e.clear()
         p1.clear()
         p2.clear()
 
@@ -162,6 +162,7 @@ class Game_Client(Client):
         gamename = self.start_menu.get_widget('start game name').get_value().split()
         gamename = '$'.join(gamename)
         game_password = self.start_menu.get_widget('start game password').get_value()
+        game_password = '$'.join(game_password)
         display_msg = ''
 
         if not game_password:
@@ -170,13 +171,13 @@ class Game_Client(Client):
         if not gamename:
             display_msg = "A blank game name won't work.\nTry again."
         else:
-            ret_val = self.make_transaction(['START_GAME_TYPE_0', '2', 'SUCCESS', 'BAD_GAME_NAME', self.username, gamename, game_password])
+            ret_val = self.make_transaction(['START_GAME', '2', 'SUCCESS', 'BAD_GAME_NAME', self.username, gamename, game_password])
 
             if ret_val[0] == "SUCCESS":
                 self.current_menu = None
                 self.gamename = gamename
                 self.active_game = True
-                self.bg = pygame.image.load('assets/images/bg2.jpg')
+                self.bg = pygame.image.load('assets/images/game_bg.jpg')
                 self.bg = pygame.transform.scale(self.bg, self.window_size)
                 
             elif ret_val[0] == "BAD_GAME_NAME":
@@ -193,6 +194,7 @@ class Game_Client(Client):
         gamename = self.join_menu.get_widget('join game name').get_value().split()
         gamename = '$'.join(gamename)
         game_password = self.join_menu.get_widget('join game password').get_value()
+        game_password = '$'.join(game_password)
         display_msg = ''
 
         if not game_password:
@@ -201,12 +203,12 @@ class Game_Client(Client):
         if not gamename:
             display_msg = "A blank game name won't work.\nTry again."
         else:
-            ret_val = self.make_transaction(['JOIN_GAME_TYPE_0', '4', 'SUCCESS', 'BAD_GAME_NAME', 'BAD_GAME_PSWD', 'GAME_FULL', self.username, gamename, game_password])
+            ret_val = self.make_transaction(['JOIN_GAME', '4', 'SUCCESS', 'BAD_GAME_NAME', 'BAD_GAME_PSWD', 'GAME_FULL', self.username, gamename, game_password])
 
             if ret_val[0] == 'SUCCESS':
                 self.current_menu = None
                 self.gamename = gamename
-                self.bg = pygame.image.load('assets/images/bg2.jpg')
+                self.bg = pygame.image.load('assets/images/game_bg.jpg')
                 self.bg = pygame.transform.scale(self.bg, self.window_size)
                 self.active_game = True
 
@@ -217,7 +219,7 @@ class Game_Client(Client):
                 display_msg = 'That was the wrong password.\nTry again.'
 
             elif ret_val[0] == 'GAME_FULL':
-                display_msg = "You can't join right now the game is full."
+                display_msg = "That game is full."
 
         label = self.join_menu.get_widget('join game messager')
         label.set_title(display_msg)
@@ -227,7 +229,7 @@ class Game_Client(Client):
         p.clear()
 
     def leave_game(self):
-        ret_val = self.make_transaction(['LEAVE_GAME_TYPE_0', '2', 'SUCCESS', 'FAIL', self.username, self.gamename])
+        ret_val = self.make_transaction(['LEAVE_GAME', '2', 'SUCCESS', 'FAIL', self.username, self.gamename])
 
         if ret_val[0] == 'SUCCESS':
             self.current_menu = self.main_menu
