@@ -1,4 +1,4 @@
-from games.blackjack.hand import *
+from blackjack.hand import *
 
 class Player:
 

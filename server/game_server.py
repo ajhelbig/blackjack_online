@@ -3,7 +3,7 @@ import json
 from base.server import Server
 from base.user import User
 from server.db_client import DB_Client
-from server.game import Game
+from blackjack.game import Game
 
 class Game_Server(Server):
 

@@ -1,14 +1,17 @@
-from base.client import Client
 import pygame
 import pygame_menu
+import pygame_widgets
 import json
+from base.client import Client
+from pygame_widgets.button import Button
 
 class Game_Client(Client):
 
     def __init__(self, s=None):
         
         super().__init__(s=s)
-
+        
+        self.in_game = False
         self.gamename = str()
         self.username = str()
         self.bank = str()
@@ -19,11 +22,9 @@ class Game_Client(Client):
         self.window_size = (1400, 1000)
         self.menu_x_scale_factor = 0.65
         self.menu_y_scale_factor = 0.65
-        self.bg = pygame.image.load('assets/images/menu_bg.png')
-        self.bg = pygame.transform.scale(self.bg, self.window_size)
+        self.set_bg("MENU")
 
         pygame.init()
-
         self.window = pygame.display.set_mode(self.window_size, pygame.RESIZABLE)
 
         self.sign_in_menu = pygame_menu.Menu('Sign In',
@@ -61,12 +62,14 @@ class Game_Client(Client):
         self.sign_in_menu.add.text_input('Password: ', textinput_id='password', password=True)
         self.sign_in_menu.add.button('Sign In', self.sign_in)
         self.sign_in_menu.add.button('Create Account', self.create_account_menu)
+        self.sign_in_menu.add.button('Quit', pygame_menu.events.EXIT)
 
         self.create_account_menu.add.label(title='', label_id='create account messager', wordwrap=True)
         self.create_account_menu.add.text_input('Username: ', textinput_id='create account username')
         self.create_account_menu.add.text_input('Password: ', textinput_id='create account 1st password')
         self.create_account_menu.add.text_input('Password: ', textinput_id='create account 2nd password')
         self.create_account_menu.add.button('Create Account', self.create_account)
+        self.create_account_menu.add.button('Quit', pygame_menu.events.EXIT)
 
         self.main_menu.add.button('Start Game', self.start_menu)
         self.main_menu.add.button('Join Game', self.join_menu)
@@ -200,6 +203,7 @@ class Game_Client(Client):
             if resp["code"] == "SUCCESS":
                 self.current_menu = None
                 self.gamename = gamename
+                self.in_game = True
                 self.set_bg("GAME")
 
             elif resp["code"] == "BAD_GAME_NAME":
@@ -237,6 +241,7 @@ class Game_Client(Client):
             if resp["code"] == 'SUCCESS':
                 self.current_menu = None
                 self.gamename = gamename
+                self.in_game = True
                 self.set_bg('GAME')
 
             elif resp["code"] == 'BAD_GAME_NAME':
@@ -267,6 +272,7 @@ class Game_Client(Client):
         if resp["code"] == 'SUCCESS':
             self.current_menu = self.main_menu
             self.gamename = None
+            self.in_game = False
             self.set_bg("MENU")
 
     def send_then_recv(self, json_dict):
@@ -277,19 +283,23 @@ class Game_Client(Client):
         path = None
 
         if bg == "MENU":
-            path = 'assets/images/menu_bg.jpg'
+            path = 'assets/images/game_bg.jpg'
         elif bg == "GAME":
             path = 'assets/images/game_bg.jpg'
 
         self.bg = pygame.image.load(path)
-        self.bg = pygame.transform.scale(self.bg, self.window.get_size())
+        self.bg = pygame.transform.scale(self.bg, self.window_size)
 
     def resize_menus(self):
-        new_window_size = self.window.get_size()
+        self.window_size = self.window.get_size()
 
         for menu in self.menus:
-            menu.resize(new_window_size[0] * self.menu_x_scale_factor, 
-                        new_window_size[1] * self.menu_y_scale_factor)
+            menu.resize(self.window_size[0] * self.menu_x_scale_factor, 
+                        self.window_size[1] * self.menu_y_scale_factor)
+            
+    def draw_game(self):
+        if self.in_game:
+            pass
 
     def play(self):
         stop = False
@@ -317,6 +327,8 @@ class Game_Client(Client):
                     self.current_menu.draw(self.window)
             except:
                 pass
+
+            self.draw_game()
 
             pygame.display.update()
 
