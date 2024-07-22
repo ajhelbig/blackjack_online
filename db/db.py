@@ -2,13 +2,14 @@ from base.server import Server
 from base.user import User
 import sqlite3
 import select
+import json
 
 class DB(Server):
 
     def __init__(self, port):
         super().__init__(port=port)
 
-        self.db_users = dict()
+        self.db_sockets = dict()
 
         self.num_connections = 0
         self.db_name = 'game.db'
@@ -31,7 +32,7 @@ class DB(Server):
         self.potential_server_writers.append(client_socket)
 
         new_user = User(client_socket)
-        self.db_users[new_user.id] = new_user
+        self.db_sockets[new_user.id] = new_user
 
         self.num_connections += 1
         print(f"Number of connected clients: {self.num_connections}")
@@ -39,20 +40,22 @@ class DB(Server):
     def sign_in(self, sock, msg):
         con = sqlite3.connect(database=self.db_name)
         cur = con.cursor()
-        user = self.db_users[id(sock)]
+        user = self.db_sockets[id(sock)]
 
-        success = msg[2]
-        bad_username = msg[3]
-        bad_password = msg[4]
-        dup_sign_in = msg[5]
-        username = msg[6]
-        password = msg[7]
+        success = msg["response_codes"][0]
+        bad_username = msg["response_codes"][1]
+        bad_password = msg["response_codes"][2]
+        username = msg["data"]["username"]
+        password = msg["data"]["password"]
+
+        ret_msg = {"code": None}
 
         query = "SELECT username FROM users WHERE username = ?"
         res = cur.execute(query, (username, ))
 
         if res.fetchone() is None:
-            user.send_q.append(bad_username)
+            ret_msg["code"] = bad_username
+            user.send_q.append(json.dumps(ret_msg))
             con.commit()
             con.close()
             return
@@ -61,30 +64,36 @@ class DB(Server):
         res = cur.execute(query, (username, password))
 
         if res.fetchone() is None:
-            user.send_q.append(bad_password)
+            ret_msg["code"] = bad_password
+            user.send_q.append(json.dumps(ret_msg))
             con.commit()
             con.close()
             return
         
-        user.send_q.append(success)
+        ret_msg["code"] = success
+        user.send_q.append(json.dumps(ret_msg))
+        
         con.commit()
         con.close()
 
     def create_account(self, sock, msg):
         con = sqlite3.connect(database=self.db_name)
         cur = con.cursor()
-        user = self.db_users[id(sock)]
+        user = self.db_sockets[id(sock)]
         
-        success = msg[2]
-        username_taken = msg[3]
-        username = msg[4]
-        password = msg[5]
+        success = msg["response_codes"][0]
+        username_taken = msg["response_codes"][1]
+        username = msg["data"]["username"]
+        password = msg["data"]["password"]
+
+        ret_msg = {"code": None}
 
         query = "SELECT username FROM users WHERE username = ?"
         res = cur.execute(query, (username, ))
 
         if res.fetchone() is not None:
-            user.send_q.append(username_taken)
+            ret_msg["code"] = username_taken
+            user.send_q.append(json.dumps(ret_msg))
             con.commit()
             con.close()
             return
@@ -95,19 +104,19 @@ class DB(Server):
         query = "INSERT INTO users(username, password) VALUES (?, ?)"
         res = cur.execute(query, username_and_password)
         
-        user.send_q.append(success)
+        ret_msg["code"] = success
+        user.send_q.append(json.dumps(ret_msg))
         con.commit()
         con.close()
 
     def handle_existing_connection_read(self, sock):
         try:
-            msg = self.recv_msg(sock).split()
-            print(f"Received msg: {msg}")
+            msg = json.loads(self.recv_msg(sock))
 
-            if msg[0] == 'SIGN_IN':
+            if msg["code"] == 'SIGN_IN':
                 self.sign_in(sock, msg)
 
-            elif msg[0] == 'CREATE_ACCOUNT':
+            elif msg["code"] == 'CREATE_ACCOUNT':
                 self.create_account(sock, msg)
 
         except Exception as e:
@@ -117,7 +126,7 @@ class DB(Server):
             self.potential_server_readers.remove(sock)
             self.potential_server_writers.remove(sock)
 
-            del self.db_users[id(sock)]
+            del self.db_sockets[id(sock)]
 
             self.num_connections -= 1
             print(f"Number of connected clients: {self.num_connections}")
@@ -135,7 +144,7 @@ class DB(Server):
 
         for sock in ready_to_write:
                 try:
-                    user = self.db_users[id(sock)]
+                    user = self.db_sockets[id(sock)]
                     msg = user.get_next_msg()
 
                     if msg is None:

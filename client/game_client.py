@@ -1,6 +1,7 @@
 from base.client import Client
 import pygame
 import pygame_menu
+import json
 
 class Game_Client(Client):
 
@@ -105,20 +106,26 @@ class Game_Client(Client):
             display_msg = "A blank username or password won't work.\nTry again."
 
         else:
-            ret_val = self.make_transaction(['SIGN_IN', '4', 'SUCCESS', 'BAD_USER', 'BAD_PSWD', 'DUP_SIGN_IN', username, password])
+            msg = {"code": "SIGN_IN", 
+                   "response_codes": ["SUCCESS", "BAD_USER", "BAD_PSWD", "DUP_SIGN_IN"], 
+                   "data": { "username": username, 
+                             "password": password }
+                    }
+            
+            resp = self.send_then_recv(msg)
 
-            if ret_val[0] == "SUCCESS":
+            if resp["code"] == "SUCCESS":
                 self.username = username
                 self.bank = 0
                 self.current_menu = self.main_menu
 
-            elif ret_val[0] == "BAD_USER":
+            elif resp["code"] == "BAD_USER":
                 display_msg = 'There is no account with that username.\nTry creating an account.'
 
-            elif ret_val[0] == "BAD_PSWD":
+            elif resp["code"] == "BAD_PSWD":
                 display_msg = 'That was not the right password.'
 
-            elif ret_val[0] == "DUP_SIGN_IN":
+            elif resp["code"] == "DUP_SIGN_IN":
                 display_msg = "You are already signed in."
             
         label = self.sign_in_menu.get_widget('sign in messager')
@@ -144,13 +151,19 @@ class Game_Client(Client):
             display_msg = 'Both passwords must be the same.'
 
         else:
-            ret_val = self.make_transaction(['CREATE_ACCOUNT', '2', 'SUCCESS', 'USER_TAKEN', username, password1])
+            msg = {"code": "CREATE_ACCOUNT", 
+                   "response_codes": ["SUCCESS", "USER_TAKEN"], 
+                   "data": { "username": username, 
+                             "password": password1 }
+                    }
+            
+            resp = self.send_then_recv(msg)
 
-            if ret_val[0] == "SUCCESS":
+            if resp["code"] == "SUCCESS":
                 self.username = username
                 self.current_menu = self.main_menu
 
-            elif ret_val[0] == "USER_TAKEN":
+            elif resp["code"] == "USER_TAKEN":
                 display_msg = 'That username is already taken.\nTry again.'
 
         label = self.create_account_menu.get_widget('create account messager')
@@ -175,15 +188,21 @@ class Game_Client(Client):
         if not gamename:
             display_msg = "A blank game name won't work.\nTry again."
         else:
-            ret_val = self.make_transaction(['START_GAME', '2', 'SUCCESS', 'BAD_GAME_NAME', self.username, gamename, game_password])
+            msg = {"code": "START_GAME", 
+                   "response_codes": ["SUCCESS", "BAD_GAME_NAME"], 
+                   "data": { "username": self.username, 
+                             "gamename": gamename, 
+                             "game_password": game_password }
+                    }
+            
+            resp = self.send_then_recv(msg)
 
-            if ret_val[0] == "SUCCESS":
+            if resp["code"] == "SUCCESS":
                 self.current_menu = None
                 self.gamename = gamename
-                self.bg = pygame.image.load('assets/images/game_bg.jpg')
-                self.bg = pygame.transform.scale(self.bg, self.window_size)
+                self.set_bg("GAME")
 
-            elif ret_val[0] == "BAD_GAME_NAME":
+            elif resp["code"] == "BAD_GAME_NAME":
                 display_msg = 'Sorry that game name is already taken.\nTry again'
 
         label = self.start_menu.get_widget('start game messager')
@@ -206,21 +225,27 @@ class Game_Client(Client):
         if not gamename:
             display_msg = "A blank game name won't work.\nTry again."
         else:
-            ret_val = self.make_transaction(['JOIN_GAME', '4', 'SUCCESS', 'BAD_GAME_NAME', 'BAD_GAME_PSWD', 'GAME_FULL', self.username, gamename, game_password])
+            msg = {"code": "JOIN_GAME", 
+                   "response_codes": ["SUCCESS", "BAD_GAME_NAME", "BAD_GAME_PSWD", "GAME_FULL"], 
+                   "data": { "username": self.username, 
+                             "gamename": gamename, 
+                             "game_password": game_password }
+                   }
+            
+            resp = self.send_then_recv(msg)
 
-            if ret_val[0] == 'SUCCESS':
+            if resp["code"] == 'SUCCESS':
                 self.current_menu = None
                 self.gamename = gamename
-                self.bg = pygame.image.load('assets/images/game_bg.jpg')
-                self.bg = pygame.transform.scale(self.bg, self.window_size)
+                self.set_bg('GAME')
 
-            elif ret_val[0] == 'BAD_GAME_NAME':
+            elif resp["code"] == 'BAD_GAME_NAME':
                 display_msg = "That game does not exist.\nTry again."
 
-            elif ret_val[0] == 'BAD_GAME_PSWD':
+            elif resp["code"] == 'BAD_GAME_PSWD':
                 display_msg = 'That was the wrong password.\nTry again.'
 
-            elif ret_val[0] == 'GAME_FULL':
+            elif resp["code"] == 'GAME_FULL':
                 display_msg = "That game is full."
 
         label = self.join_menu.get_widget('join game messager')
@@ -231,19 +256,33 @@ class Game_Client(Client):
         p.clear()
 
     def leave_game(self):
-        ret_val = self.make_transaction(['LEAVE_GAME', '2', 'SUCCESS', 'FAIL', self.username, self.gamename])
+        msg = {"code": "LEAVE_GAME",
+               "response_codes": ["SUCCESS", "FAIL"], 
+               "data": { "username": self.username, 
+                         "gamename": self.gamename }
+                }
+        
+        resp = self.send_then_recv(msg)
 
-        if ret_val[0] == 'SUCCESS':
+        if resp["code"] == 'SUCCESS':
             self.current_menu = self.main_menu
             self.gamename = None
+            self.set_bg("MENU")
 
-            self.bg = pygame.image.load('assets/images/menu_bg.jpg')
-            self.bg = pygame.transform.scale(self.bg, self.window_size)
+    def send_then_recv(self, json_dict):
+        self.send_q.append(json.dumps(json_dict))
+        return self.await_msg(json.dumps(json_dict))
+    
+    def set_bg(self, bg):
+        path = None
 
-    def make_transaction(self, arr_msg):
-        server_msg = ' '.join(arr_msg)
-        self.send_q.append(server_msg)
-        return self.await_msg(server_msg).split()
+        if bg == "MENU":
+            path = 'assets/images/menu_bg.jpg'
+        elif bg == "GAME":
+            path = 'assets/images/game_bg.jpg'
+
+        self.bg = pygame.image.load(path)
+        self.bg = pygame.transform.scale(self.bg, self.window.get_size())
 
     def resize_menus(self):
         new_window_size = self.window.get_size()
@@ -281,7 +320,6 @@ class Game_Client(Client):
 
             pygame.display.update()
 
-        #TODO store state before exiting
         pygame.quit()
         exit()
 

@@ -1,4 +1,5 @@
 import select
+import json
 from base.server import Server
 from base.user import User
 from server.db_client import DB_Client
@@ -16,8 +17,8 @@ class Game_Server(Server):
 
         self.num_connections = 0
 
-        self.server_users = dict()
-        self.usernames = dict()
+        self.server_sockets = dict()
+        self.users = dict()
         self.active_games = dict()
 
     def handle_new_connection(self, sock):
@@ -27,116 +28,135 @@ class Game_Server(Server):
         self.potential_server_writers.append(client_socket)
 
         new_user = User(client_socket)
-        self.server_users[new_user.id] = new_user
+        self.server_sockets[new_user.id] = new_user
 
         self.num_connections += 1
         print(f"Number of connected clients: {self.num_connections}")
 
-    def sign_in(self, sock, msg):
-        user = self.server_users[id(sock)]
-        username = msg[6]
+    def sign_in(self, sock,  msg):
+        user = self.server_sockets[id(sock)]
+        username = msg["data"]["username"]
+        dup_sign_in = msg["response_codes"][3]
 
-        if username in self.usernames:
-            user.send_q.append(msg[5])
+        ret_msg = {"code": None}
+
+        if username in self.users:
+            ret_msg["code"] = dup_sign_in
+            user.send_q.append(json.dumps(ret_msg))
+            return
         
-        ret_val = self.db.send(' '.join(msg))
-        user.send_q.append(ret_val)
-        ret_val = ret_val.split()
+        ret_val = self.db.send(json.dumps(msg))
+        user.send_q.append(json.dumps(ret_val))
 
-        if ret_val[0] == 'SUCCESS':
-            self.usernames[username] = user
+        if ret_val["code"] == 'SUCCESS':
+            self.users[username] = user
             user.name = username
 
     def create_account(self, sock, msg):
-        user = self.server_users[id(sock)]
-        ret_val = self.db.send(' '.join(msg))
-        user.send_q.append(ret_val)
-        ret_val = ret_val.split()
+        user = self.server_sockets[id(sock)]
+        ret_val = self.db.send(json.dumps(msg))
+        user.send_q.append(json.dumps(ret_val))
 
-        if ret_val[0] == 'SUCCESS':
-            username = msg[4]
+        if ret_val["code"] == 'SUCCESS':
+            username = msg["data"]["username"]
 
-            self.usernames[username] = user
+            self.users[username] = user
             user.name = username
 
-    def start_game(self, sock, msg):
-        user = self.server_users[id(sock)]
+    def start_game(self, msg):
+        user = self.users[msg["data"]["username"]]
         
-        gamename = msg[5]
-        game_password = msg[6]
+        gamename = msg["data"]["gamename"]
+        game_password = msg["data"]["game_password"]
+        success = msg["response_codes"][0]
+        bad_game_name = msg["response_codes"][1]
 
-        success = msg[2]
-        bad_game_name = msg[3]
+        ret_msg = {"code": None}
 
         if gamename in self.active_games:
-            user.send_q.append(bad_game_name)
+            ret_msg["code"] = bad_game_name
         else:
             new_game = Game(gamename, game_password)
             new_game.add_player(user.name)
             self.active_games[gamename] = new_game
             user.add_game(new_game)
+            ret_msg["code"] = success
 
-            user.send_q.append(success)
+        user.send_q.append(json.dumps(ret_msg))
 
-    def join_game(self, sock, msg):
-        user = self.server_users[id(sock)]
+    def join_game(self, msg):
+        user = self.users[msg["data"]["username"]]
         
-        success = msg[2]
-        bad_game_name = msg[3]
-        bad_game_password = msg[4]
-        game_full = msg[5]
-        username = msg[6]
-        gamename = msg[7]
-        game_password = msg[8]
+        success = msg["response_codes"][0]
+        bad_game_name = msg["response_codes"][1]
+        bad_game_password = msg["response_codes"][2]
+        game_full = msg["response_codes"][3]
+        gamename = msg["data"]["gamename"]
+        game_password = msg["data"]["game_password"]
+
+        ret_msg = {"code": None}
+
+        game = None
+
+        if gamename not in self.active_games:
+            ret_msg["code"] = bad_game_name
+            user.send_q.append(json.dumps(ret_msg))
+            return
+        else:
+            game = self.active_games[gamename]
+
+        if game.bad_password(game_password):
+            ret_msg["code"] = bad_game_password
+            
+        elif not game.add_player(user.name):
+            ret_msg["code"] = game_full
+        
+        else:
+            user.add_game(game)
+            ret_msg["code"] = success
+
+        user.send_q.append(json.dumps(ret_msg))
+        
+    def leave_game(self, msg):
+        ret_msg = {"code": None}
+        success = msg["response_codes"][0]
+        fail = msg["response_codes"][1]
 
         try:
-            game = self.active_games[gamename]
-        
-            if game.bad_password(game_password) :
-                user.send_q.append(bad_game_password)
-                return
-
-            elif not game.add_player(user.name):
-                user.send_q.append(game_full)
-                return
-        
-            user.add_game(game)
-            user.send_q.append(success)
+            user = self.users[msg["data"]["username"]]
+            self.remove_user_from_game(user)
+            ret_msg["code"] = success
         except:
-            user.send_q.append(bad_game_name)
-            return
-
-    def leave_game(self, sock):
-        user = self.server_users[id(sock)]
-        self.remove_user_from_game(user)
+            ret_msg["code"] = fail
+            
+        user.send_q.append(json.dumps(ret_msg))
 
     def remove_user_from_game(self, user):
         game = self.active_games[user.game.name]
         game.remove_player(user.name)
         user.remove_game()
-        
+
         if game.num_players == 0:
-            del self.active_games[user.game.name]
+            del self.active_games[game.name]
           
     def handle_existing_connection_read(self, sock):
         try:
-            msg = self.recv_msg(sock).split()
-            print(f"Received data from {sock.getpeername()}: {msg}")
+            msg = json.loads(self.recv_msg(sock))
 
-            if msg[0] == 'SIGN_IN':
+            if msg["code"] == 'SIGN_IN':
                 self.sign_in(sock, msg)
 
-            elif msg[0] == 'CREATE_ACCOUNT':
+            elif msg["code"] == 'CREATE_ACCOUNT':
                 self.create_account(sock, msg)
 
-            elif msg[0] == 'START_GAME':
-                self.start_game(sock, msg)
+            elif msg["code"] == 'START_GAME':
+                self.start_game(msg)
             
-            elif msg[0] == 'JOIN_GAME':
-                self.join_game(sock, msg)
+            elif msg["code"] == 'JOIN_GAME':
+                self.join_game(msg)
 
-            elif msg[0] == 'LEAVE_GAME':
-                self.leave_game(sock)
+            elif msg["code"] == 'LEAVE_GAME':
+                self.leave_game(msg)
 
         except Exception as e:
             print(f"error: {e}")
@@ -144,15 +164,15 @@ class Game_Server(Server):
             sock.close()
             self.potential_server_readers.remove(sock)
             self.potential_server_writers.remove(sock)
-            user = self.server_users[id(sock)]
+            user = self.server_sockets[id(sock)]
             
             if user.in_game:
                 self.remove_user_from_game(user)
 
             if user.name is not None:
-                del self.usernames[user.name]
+                del self.users[user.name]
 
-            del self.server_users[id(sock)]
+            del self.server_sockets[id(sock)]
 
             self.num_connections -= 1
             print(f"Number of connected clients: {self.num_connections}")
@@ -170,7 +190,7 @@ class Game_Server(Server):
 
         for sock in ready_to_write:
                 try:
-                    user = self.server_users[id(sock)]
+                    user = self.server_sockets[id(sock)]
                     msg = user.get_next_msg()
 
                     if msg is None:

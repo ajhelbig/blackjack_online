@@ -1,5 +1,6 @@
 import socket
 import threading
+import json
 
 class Client:
 
@@ -72,18 +73,18 @@ class Client:
             msg = self.recv_msg()
             recv_q.append(msg)
 
-    def await_msg(self, msg_sent):
-        split_msg = msg_sent.split()
-        num_resp = int(split_msg[1])
-        responses = split_msg[2:2+num_resp]
+    def await_msg(self, msg):
 
+        msg_dict = json.loads(msg)
+        
         while True:
             try:
-                resp = self.recv_q.pop(0).split()
-                if resp[0] in responses:
-                    return ' '.join(resp)
+                resp = json.loads(self.recv_q.pop(0))
+
+                if resp["code"] in msg_dict["response_codes"]:
+                    return resp
                 else:
-                    self.recv_q.append(' '.join(resp))
+                    self.recv_q.append(json.dumps(resp))
             except:
                 pass
 

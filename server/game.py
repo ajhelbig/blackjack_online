@@ -24,9 +24,11 @@ class Game:
         new_player = Player(username, self.player_starting_bank)
         self.players[username] = new_player
         self.num_players += 1
+        print(f"Players in game: {self.num_players}")
 
         return True
 
     def remove_player(self, username):
         del self.players[username]
         self.num_players -= 1
+        print(f"Players in game: {self.num_players}")
