@@ -71,7 +71,7 @@ class Game_Server(Server):
         success = msg["response_codes"][0]
         bad_game_name = msg["response_codes"][1]
 
-        ret_msg = {"code": None}
+        ret_msg = {"code": None, "data": {"game_state": None, "starting_bank": None}}
 
         if gamename in self.active_games:
             ret_msg["code"] = bad_game_name
@@ -80,7 +80,10 @@ class Game_Server(Server):
             new_game.add_player(user.name)
             self.active_games[gamename] = new_game
             user.add_game(new_game)
+
             ret_msg["code"] = success
+            ret_msg["data"]["game_state"] = new_game.state
+            ret_msg["data"]["starting_bank"] = new_game.player_starting_bank
 
         user.send_q.append(json.dumps(ret_msg))
 
@@ -94,7 +97,7 @@ class Game_Server(Server):
         gamename = msg["data"]["gamename"]
         game_password = msg["data"]["game_password"]
 
-        ret_msg = {"code": None}
+        ret_msg = {"code": None, "data": {"game_state": None}}
 
         game = None
 
@@ -114,6 +117,8 @@ class Game_Server(Server):
         else:
             user.add_game(game)
             ret_msg["code"] = success
+            ret_msg["data"]["game_state"] = game.state
+            ret_msg["data"]["starting_bank"] = game.player_starting_bank
 
         user.send_q.append(json.dumps(ret_msg))
         

@@ -10,6 +10,7 @@ class Game:
         self.max_num_players = 7
         self.house_bank = 1000
         self.player_starting_bank = 0
+        self.state = "BET"
 
     def bad_password(self, password):
         if self.password == "NULL":
@@ -32,3 +33,6 @@ class Game:
         del self.players[username]
         self.num_players -= 1
         print(f"Players in game: {self.num_players}")
+
+    def place_bet(self, username, bet):
+        pass

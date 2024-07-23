@@ -3,7 +3,7 @@ import pygame_menu
 import pygame_widgets
 import json
 from base.client import Client
-from pygame_widgets.button import Button
+from client.input import *
 
 class Game_Client(Client):
 
@@ -12,12 +12,15 @@ class Game_Client(Client):
         super().__init__(s=s)
         
         self.in_game = False
-        self.gamename = str()
-        self.username = str()
-        self.bank = str()
-        self.players = list()
-        self.player_hands = list()
-        self.dealer_hands = list()
+        self.game_state = None
+        self.gamename = None
+        self.username = None
+        self.bank = None
+        self.active_inputs = None
+        self.active_hand = None
+        self.players = []
+        self.player_hands = []
+        self.dealer_hands = []
 
         self.window_size = (1400, 1000)
         self.menu_x_scale_factor = 0.65
@@ -27,6 +30,7 @@ class Game_Client(Client):
         pygame.init()
         self.window = pygame.display.set_mode(self.window_size, pygame.RESIZABLE)
 
+        #TODO rafactor menu initialization into its own file like the buttons
         self.sign_in_menu = pygame_menu.Menu('Sign In',
                                         self.window_size[0] * self.menu_x_scale_factor, 
                                         self.window_size[1] * self.menu_y_scale_factor,
@@ -90,6 +94,9 @@ class Game_Client(Client):
 
         self.menus = [self.sign_in_menu, self.create_account_menu, self.main_menu, self.join_menu, self.start_menu, self.pause_menu]
         self.current_menu = self.sign_in_menu
+
+        self.play_buttons = get_new_play_buttons(self.window, self.insurance, self.double_down, self.hit, self.stand, self.split, self.surrender)
+        self.bet_text_box = get_new_bet_text_box(self.window, self.bet)
 
     def pause_resume(self):
         self.current_menu = None
@@ -164,6 +171,7 @@ class Game_Client(Client):
 
             if resp["code"] == "SUCCESS":
                 self.username = username
+                self.bank = 0
                 self.current_menu = self.main_menu
 
             elif resp["code"] == "USER_TAKEN":
@@ -204,7 +212,8 @@ class Game_Client(Client):
                 self.current_menu = None
                 self.gamename = gamename
                 self.in_game = True
-                self.set_bg("GAME")
+                self.game_state = resp["data"]["game_state"]
+                self.bank = resp["data"]["starting_bank"]
 
             elif resp["code"] == "BAD_GAME_NAME":
                 display_msg = 'Sorry that game name is already taken.\nTry again'
@@ -242,7 +251,8 @@ class Game_Client(Client):
                 self.current_menu = None
                 self.gamename = gamename
                 self.in_game = True
-                self.set_bg('GAME')
+                self.game_state = resp["data"]["game_state"]
+                self.bank = resp["data"]["starting_bank"]
 
             elif resp["code"] == 'BAD_GAME_NAME':
                 display_msg = "That game does not exist.\nTry again."
@@ -273,7 +283,12 @@ class Game_Client(Client):
             self.current_menu = self.main_menu
             self.gamename = None
             self.in_game = False
-            self.set_bg("MENU")
+            self.game_state = None
+            self.bank = None
+
+            self.active_inputs.hide()
+            self.active_inputs = None
+            self.bet_text_box = get_new_bet_text_box(self.window, self.bet)
 
     def send_then_recv(self, json_dict):
         self.send_q.append(json.dumps(json_dict))
@@ -296,18 +311,84 @@ class Game_Client(Client):
         for menu in self.menus:
             menu.resize(self.window_size[0] * self.menu_x_scale_factor, 
                         self.window_size[1] * self.menu_y_scale_factor)
-            
+
+    def draw_dealer_cards(self):
+        pass
+
+    def draw_other_players_cards(self):
+        pass
+
+    def draw_player_cards(self):
+        pass
+
+    def show_inputs(self, button):
+        if self.active_inputs is not None:
+            self.active_inputs.hide()
+
+        self.active_inputs = button
+        self.active_inputs.show()
+
     def draw_game(self):
         if self.in_game:
-            pass
+            self.draw_dealer_cards()
+            self.draw_other_players_cards()
+            self.draw_player_cards()
+
+            if self.game_state == "BET":
+                self.show_inputs(self.bet_text_box)
+
+            elif self.game_state == "PLAY":
+                self.show_inputs(self.play_buttons)
+                
+            elif self.game_state == "WAITING_FOR_BETS":
+                pass
+
+            elif self.game_state == "WAITING_FOR_TURN":
+                pass
+
+    def bet(self):
+        bet_input = self.bet_text_box.getText()
+        bet_amount = None
+
+        try:
+            bet_amount = int(bet_input)
+            print(bet_amount)
+            self.game_state = "PLAY"
+            #TODO send bet_amount to server and receive next state
+        except:
+            self.bet_text_box.placeholderText = "That was a bad bet. Try again."
+            self.bet_text_box.setText("")
+
+    def insurance(self):
+        print("Insurance")
+
+    def double_down(self):
+        print("Double Down")
+
+    def hit(self):
+        print("Hit")
+
+    def stand(self):
+        print("Stand")
+
+    def split(self):
+        print("Split")
+
+    def surrender(self):
+        print("Surrender")
+    
+    def draw_bg(self):
+        self.window.blit(self.bg, (0, 0))
 
     def play(self):
         stop = False
         while not stop:
 
-            self.window.blit(self.bg, (0, 0))
+            self.draw_bg()
+            self.draw_game()
 
             events = pygame.event.get()
+            pygame_widgets.update(events)
 
             for event in events:
 
@@ -327,9 +408,7 @@ class Game_Client(Client):
                     self.current_menu.draw(self.window)
             except:
                 pass
-
-            self.draw_game()
-
+            
             pygame.display.update()
 
         pygame.quit()
