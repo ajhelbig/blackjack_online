@@ -10,6 +10,8 @@ class Menus:
         self.menu_x_scale_factor = 0.65
         self.menu_y_scale_factor = 0.65
 
+        self.default_game_message = 'This is where messages will appear.'
+
         self.sign_in_menu = pygame_menu.Menu('Sign In',
                                         self.window_size[0] * self.menu_x_scale_factor, 
                                         self.window_size[1] * self.menu_y_scale_factor,
@@ -76,7 +78,7 @@ class Menus:
         self.pause_menu.add.button('Resume', pause_resume)
         self.pause_menu.add.button('Leave Game', pause_leave_game)
 
-        self.game_message_menu.add.label(title='This is where messages will appear.', label_id='game messager', wordwrap=True)
+        self.game_message_menu.add.label(title=self.default_game_message, label_id='game messager', wordwrap=True)
         self.game_message_menu.set_absolute_position(0, 0)
 
         self.current_menu = self.sign_in_menu
@@ -165,7 +167,10 @@ class Menus:
         u.clear()
         p.clear()
 
-    def set_game_message(self, msg):
+    def set_game_message(self, msg=None):
+        if msg is None:
+            msg = self.default_game_message
+        
         game_messager = self.game_message_menu.get_widget('game messager')
         game_messager.set_title(msg)
 

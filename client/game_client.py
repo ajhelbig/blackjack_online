@@ -158,6 +158,7 @@ class Game_Client(Client):
             resp = self.send_then_recv(msg)
 
             if resp["code"] == 'SUCCESS':
+                self.menus.set_game_message()
                 self.menus.switch_to_game_message_menu()
                 self.gamename = gamename
                 self.in_game = True
