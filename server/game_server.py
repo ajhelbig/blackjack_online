@@ -65,6 +65,7 @@ class Game_Server(Server):
 
     def start_game(self, msg):
         user = self.users[msg["data"]["username"]]
+        print(msg)
         
         gamename = msg["data"]["gamename"]
         game_password = msg["data"]["game_password"]
@@ -89,6 +90,7 @@ class Game_Server(Server):
 
     def join_game(self, msg):
         user = self.users[msg["data"]["username"]]
+        print(msg)
         
         success = msg["response_codes"][0]
         bad_game_name = msg["response_codes"][1]
@@ -108,7 +110,7 @@ class Game_Server(Server):
         else:
             game = self.active_games[gamename]
 
-        if game.bad_password(game_password):
+        if not game.good_password(game_password):
             ret_msg["code"] = bad_game_password
             
         elif not game.add_player(user.name):

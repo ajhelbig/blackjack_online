@@ -2,13 +2,19 @@ from pygame_widgets.button import ButtonArray
 from pygame_widgets.textbox import TextBox
 
 def get_new_play_buttons(window, insurance, double_down, hit, stand, split, surrender):
+        window_size = window.get_size()
+        height = 100
+        width = window_size[0] * 0.75
+        x = window_size[0] * 0.125
+        y = window_size[1] - 2 * height
+
         new_play_buttons = ButtonArray(
                             # Mandatory Parameters
                             window,  # Surface to place button array on
-                            50,  # X-coordinate
-                            50,  # Y-coordinate
-                            1200,  # Width
-                            100,  # Height
+                            x,  # X-coordinate
+                            y,  # Y-coordinate
+                            width,  # Width
+                            height,  # Height
                             (6, 1),  # Shape: 2 buttons wide, 2 buttons tall
                             border=10,  # Distance between buttons and edge of array
                             texts=('Insurance', 'Double Down', 'Hit', 'Stand', 'Split', 'Surrender'),  # Sets the texts of each button (counts left to right then top to bottom)
@@ -20,15 +26,21 @@ def get_new_play_buttons(window, insurance, double_down, hit, stand, split, surr
         return new_play_buttons
 
 def get_new_bet_text_box(window, bet):
+        window_size = window.get_size()
+        height = 100
+        width = window_size[0] * 0.75
+        x = window_size[0] * 0.125
+        y = window_size[1] - 2 * height
+
         new_text_box = TextBox(
                             window, 
-                            100, 
-                            100, 
-                            800, 
-                            80, 
+                            x, 
+                            y, 
+                            width, 
+                            height, 
                             fontSize=50,
-                            borderColour=(255, 0, 0), 
-                            textColour=(0, 200, 0),
+                            borderColour=(0, 0, 0), 
+                            textColour=(0, 0, 0),
                             onSubmit=bet, 
                             radius=10, 
                             borderThickness=5, 

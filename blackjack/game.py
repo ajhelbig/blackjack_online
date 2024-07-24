@@ -12,11 +12,8 @@ class Game:
         self.player_starting_bank = 0
         self.state = "BET"
 
-    def bad_password(self, password):
-        if self.password == "NULL":
-            return False
-        else:
-            return self.password == password
+    def good_password(self, password):
+        return self.password == password
 
     def add_player(self, username):
         if self.num_players + 1 > self.max_num_players:

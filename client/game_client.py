@@ -305,13 +305,16 @@ class Game_Client(Client):
         self.bg = pygame.image.load(path)
         self.bg = pygame.transform.scale(self.bg, self.window_size)
 
-    def resize_menus(self):
+    def resize_ui(self):
         self.window_size = self.window.get_size()
 
         for menu in self.menus:
             menu.resize(self.window_size[0] * self.menu_x_scale_factor, 
                         self.window_size[1] * self.menu_y_scale_factor)
-
+        
+        self.play_buttons = get_new_play_buttons(self.window, self.insurance, self.double_down, self.hit, self.stand, self.split, self.surrender)
+        self.bet_text_box = get_new_bet_text_box(self.window, self.bet)
+        
     def draw_dealer_cards(self):
         pass
 
@@ -397,7 +400,7 @@ class Game_Client(Client):
 
                 elif event.type == pygame.WINDOWSIZECHANGED:
                     self.bg = pygame.transform.scale(self.bg, self.window.get_size())
-                    self.resize_menus()
+                    self.resize_ui()
                 
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     self.current_menu = self.pause_menu
