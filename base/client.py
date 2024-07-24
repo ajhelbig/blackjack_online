@@ -84,6 +84,7 @@ class Client:
                 if resp["code"] in msg_dict["response_codes"]:
                     return resp
                 else:
+                    print(resp)
                     self.recv_q.append(json.dumps(resp))
             except:
                 pass

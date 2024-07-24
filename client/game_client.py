@@ -16,13 +16,14 @@ class Game_Client(Client):
         self.gamename = None
         self.username = None
         self.bank = None
+        self.current_menu = None
         self.active_inputs = None
         self.active_hand = None
         self.players = []
         self.player_hands = []
         self.dealer_hands = []
 
-        self.window_size = (1400, 1000)
+        self.window_size = (1200, 1000)
         self.menu_x_scale_factor = 0.65
         self.menu_y_scale_factor = 0.65
         self.set_bg("MENU")
@@ -31,6 +32,11 @@ class Game_Client(Client):
         self.window = pygame.display.set_mode(self.window_size, pygame.RESIZABLE)
 
         #TODO rafactor menu initialization into its own file like the buttons
+        self.game_message_menu = pygame_menu.Menu('Messages',
+                                        self.window_size[0], 
+                                        120,
+                                        theme=pygame_menu.themes.THEME_DARK)
+
         self.sign_in_menu = pygame_menu.Menu('Sign In',
                                         self.window_size[0] * self.menu_x_scale_factor, 
                                         self.window_size[1] * self.menu_y_scale_factor,
@@ -60,6 +66,9 @@ class Game_Client(Client):
                                         self.window_size[0] * self.menu_x_scale_factor, 
                                         self.window_size[1] * self.menu_y_scale_factor,
                                         theme=pygame_menu.themes.THEME_DARK)
+        
+        self.game_message_menu.add.label(title='This is where messages will appear.', label_id='game messager', wordwrap=True)
+        self.game_message_menu.set_absolute_position(0, 0)
 
         self.sign_in_menu.add.label(title='', label_id='sign in messager', wordwrap=True)
         self.sign_in_menu.add.text_input('Username: ', textinput_id='username')
@@ -79,7 +88,7 @@ class Game_Client(Client):
         self.main_menu.add.button('Join Game', self.join_menu)
         self.main_menu.add.button('Quit', pygame_menu.events.EXIT)
 
-        self.join_menu.add.label('', label_id='join game messager')
+        self.join_menu.add.label('', label_id='join game messager', wordwrap=True)
         self.join_menu.add.text_input('Game Name: ', textinput_id='join game name')
         self.join_menu.add.text_input('Optional - Game Password: ', textinput_id='join game password')
         self.join_menu.add.button('Join', self.join_game)
@@ -99,7 +108,7 @@ class Game_Client(Client):
         self.bet_text_box = get_new_bet_text_box(self.window, self.bet)
 
     def pause_resume(self):
-        self.current_menu = None
+        self.current_menu = self.game_message_menu
 
     def pause_leave_game(self):
         self.current_menu = self.main_menu
@@ -107,9 +116,7 @@ class Game_Client(Client):
 
     def sign_in(self):
         username = self.sign_in_menu.get_widget('username').get_value()
-        username = '$'.join(username)
         password = self.sign_in_menu.get_widget('password').get_value()
-        password = '$'.join(password)
         display_msg = ''
 
         if not username or not password:
@@ -147,11 +154,8 @@ class Game_Client(Client):
 
     def create_account(self):
         username = self.create_account_menu.get_widget('create account username').get_value()
-        username = '$'.join(username)
         password1 = self.create_account_menu.get_widget('create account 1st password').get_value()
-        password1 = '$'.join(password1)
         password2 = self.create_account_menu.get_widget('create account 2nd password').get_value()
-        password2 = '$'.join(password2)
         display_msg = ''
 
         if not username or not password1 or not password2:
@@ -187,10 +191,8 @@ class Game_Client(Client):
         p2.clear()
 
     def start_game(self):
-        gamename = self.start_menu.get_widget('start game name').get_value().split()
-        gamename = '$'.join(gamename)
+        gamename = self.start_menu.get_widget('start game name').get_value()
         game_password = self.start_menu.get_widget('start game password').get_value()
-        game_password = '$'.join(game_password)
         display_msg = ''
 
         if not game_password:
@@ -209,7 +211,7 @@ class Game_Client(Client):
             resp = self.send_then_recv(msg)
 
             if resp["code"] == "SUCCESS":
-                self.current_menu = None
+                self.current_menu = self.game_message_menu
                 self.gamename = gamename
                 self.in_game = True
                 self.game_state = resp["data"]["game_state"]
@@ -226,10 +228,8 @@ class Game_Client(Client):
         p.clear()
 
     def join_game(self):
-        gamename = self.join_menu.get_widget('join game name').get_value().split()
-        gamename = '$'.join(gamename)
+        gamename = self.join_menu.get_widget('join game name').get_value()
         game_password = self.join_menu.get_widget('join game password').get_value()
-        game_password = '$'.join(game_password)
         display_msg = ''
 
         if not game_password:
@@ -248,7 +248,7 @@ class Game_Client(Client):
             resp = self.send_then_recv(msg)
 
             if resp["code"] == 'SUCCESS':
-                self.current_menu = None
+                self.current_menu = self.game_message_menu
                 self.gamename = gamename
                 self.in_game = True
                 self.game_state = resp["data"]["game_state"]
@@ -314,6 +314,9 @@ class Game_Client(Client):
         
         self.play_buttons = get_new_play_buttons(self.window, self.insurance, self.double_down, self.hit, self.stand, self.split, self.surrender)
         self.bet_text_box = get_new_bet_text_box(self.window, self.bet)
+
+        self.game_message_menu.resize(self.window_size[0], 120)
+        self.game_message_menu.set_absolute_position(0, 0)
         
     def draw_dealer_cards(self):
         pass
@@ -383,6 +386,25 @@ class Game_Client(Client):
     def draw_bg(self):
         self.window.blit(self.bg, (0, 0))
 
+    def set_game_message(self, msg):
+        game_messager = self.game_message_menu.get_widget('game messager')
+        game_messager.set_title(msg)
+
+    def listen_for_broadcast(self, iterations):
+        for _ in range(iterations):
+            try:
+                resp = json.loads(self.recv_q.pop(0))
+
+                if resp["code"] == "BROADCAST":
+                    if resp["data"]["type"] == "PLAYER_JOIN" or \
+                       resp["data"]["type"] == "PLAYER_LEAVE":
+                        self.set_game_message(resp["data"]["msg"])
+                    
+                else:
+                    self.recv_q.append(json.dumps(resp))
+            except:
+                pass
+
     def play(self):
         stop = False
         while not stop:
@@ -411,6 +433,8 @@ class Game_Client(Client):
                     self.current_menu.draw(self.window)
             except:
                 pass
+
+            self.listen_for_broadcast(10)
             
             pygame.display.update()
 

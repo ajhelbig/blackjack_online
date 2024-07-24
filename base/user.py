@@ -1,3 +1,4 @@
+import json
 
 class User:
 
@@ -26,3 +27,9 @@ class User:
             return self.send_q.pop(0)
         except:
             return None
+        
+    def broadcast(self, users, msg):
+        for other_player in self.game.players:
+                        if other_player != self.name:
+                            other_user = users[other_player]
+                            other_user.send_q.append(json.dumps(msg))

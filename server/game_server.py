@@ -65,7 +65,6 @@ class Game_Server(Server):
 
     def start_game(self, msg):
         user = self.users[msg["data"]["username"]]
-        print(msg)
         
         gamename = msg["data"]["gamename"]
         game_password = msg["data"]["game_password"]
@@ -89,8 +88,8 @@ class Game_Server(Server):
         user.send_q.append(json.dumps(ret_msg))
 
     def join_game(self, msg):
-        user = self.users[msg["data"]["username"]]
-        print(msg)
+        username = msg["data"]["username"]
+        user = self.users[username]
         
         success = msg["response_codes"][0]
         bad_game_name = msg["response_codes"][1]
@@ -122,6 +121,12 @@ class Game_Server(Server):
             ret_msg["data"]["game_state"] = game.state
             ret_msg["data"]["starting_bank"] = game.player_starting_bank
 
+            broadcast_msg = {"code": "BROADCAST", 
+                         "data": {"type": "PLAYER_JOIN", 
+                                  "msg": f"{username} joined the game!"}}
+
+            user.broadcast(self.users, broadcast_msg)
+
         user.send_q.append(json.dumps(ret_msg))
         
     def leave_game(self, msg):
@@ -130,9 +135,20 @@ class Game_Server(Server):
         fail = msg["response_codes"][1]
 
         try:
-            user = self.users[msg["data"]["username"]]
+            username = msg["data"]["username"]
+            gamename = msg["data"]["gamename"]
+            user = self.users[username]
+            game = self.active_games[gamename]
+
+            broadcast_msg = {"code": "BROADCAST", 
+                         "data": {"type": "PLAYER_LEAVE", 
+                                  "msg": f"{username} left the game."}}
+            
+            user.broadcast(self.users, broadcast_msg)
+            
             self.remove_user_from_game(user)
             ret_msg["code"] = success
+
         except:
             ret_msg["code"] = fail
             
@@ -174,6 +190,12 @@ class Game_Server(Server):
             user = self.server_sockets[id(sock)]
             
             if user.in_game:
+                broadcast_msg = {"code": "BROADCAST", 
+                         "data": {"type": "PLAYER_LEAVE", 
+                                  "msg": f"{user.name} left the game."}}
+                
+                user.broadcast(self.users, broadcast_msg)
+
                 self.remove_user_from_game(user)
 
             if user.name is not None:
