@@ -1,9 +1,7 @@
 import pygame
-import pygame_widgets
 import json
 from base.client import Client
 from client.menus import Menus
-from client.input import *
 
 class Game_Client(Client):
 
@@ -34,13 +32,11 @@ class Game_Client(Client):
                            self.start_game,
                            self.join_game,
                            self.pause_leave_game,
-                           self.pause_resume)
-
-        self.play_buttons = get_new_play_buttons(self.window, self.insurance, self.double_down, self.hit, self.stand, self.split, self.surrender)
-        self.bet_text_box = get_new_bet_text_box(self.window, self.bet)
+                           self.pause_resume,
+                           self.bet)
 
     def pause_resume(self):
-        self.menus.switch_to_game_message_menu()
+        self.menus.switch_to_game_menu("RESUME")
 
     def pause_leave_game(self):
         self.menus.switch_to_main_menu()
@@ -127,11 +123,11 @@ class Game_Client(Client):
             resp = self.send_then_recv(msg)
 
             if resp["code"] == "SUCCESS":
-                self.menus.switch_to_game_message_menu()
                 self.gamename = gamename
                 self.in_game = True
                 self.game_state = resp["data"]["game_state"]
                 self.bank = resp["data"]["starting_bank"]
+                self.menus.switch_to_game_menu(self.game_state)
 
             elif resp["code"] == "BAD_GAME_NAME":
                 display_msg = 'Sorry that game name is already taken.\nTry again'
@@ -158,12 +154,12 @@ class Game_Client(Client):
             resp = self.send_then_recv(msg)
 
             if resp["code"] == 'SUCCESS':
-                self.menus.set_game_message()
-                self.menus.switch_to_game_message_menu()
                 self.gamename = gamename
                 self.in_game = True
                 self.game_state = resp["data"]["game_state"]
                 self.bank = resp["data"]["starting_bank"]
+                self.menus.set_game_message()
+                self.menus.switch_to_game_menu(self.game_state)
 
             elif resp["code"] == 'BAD_GAME_NAME':
                 display_msg = "That game does not exist.\nTry again."
@@ -174,7 +170,7 @@ class Game_Client(Client):
             elif resp["code"] == 'GAME_FULL':
                 display_msg = "That game is full."
 
-        self.menus.get_join_game_values(display_msg)
+        self.menus.set_join_game_values(display_msg)
 
     def leave_game(self):
         msg = {"code": "LEAVE_GAME",
@@ -191,10 +187,6 @@ class Game_Client(Client):
             self.in_game = False
             self.game_state = None
             self.bank = None
-
-            self.active_inputs.hide()
-            self.active_inputs = None
-            self.bet_text_box = get_new_bet_text_box(self.window, self.bet)
 
     def send_then_recv(self, json_dict):
         self.send_q.append(json.dumps(json_dict))
@@ -216,9 +208,6 @@ class Game_Client(Client):
 
         self.menus.resize(self.window_size)
         
-        self.play_buttons = get_new_play_buttons(self.window, self.insurance, self.double_down, self.hit, self.stand, self.split, self.surrender)
-        self.bet_text_box = get_new_bet_text_box(self.window, self.bet)
-        
     def draw_dealer_cards(self):
         pass
 
@@ -228,43 +217,27 @@ class Game_Client(Client):
     def draw_player_cards(self):
         pass
 
-    def show_inputs(self, button):
-        if self.active_inputs is not None:
-            self.active_inputs.hide()
-
-        self.active_inputs = button
-        self.active_inputs.show()
-
     def draw_game(self):
         if self.in_game:
             self.draw_dealer_cards()
+
             self.draw_other_players_cards()
+
             self.draw_player_cards()
 
-            if self.game_state == "BET":
-                self.show_inputs(self.bet_text_box)
-
-            elif self.game_state == "PLAY":
-                self.show_inputs(self.play_buttons)
-                
-            elif self.game_state == "WAITING_FOR_BETS":
-                pass
-
-            elif self.game_state == "WAITING_FOR_TURN":
-                pass
-
     def bet(self):
-        bet_input = self.bet_text_box.getText()
+        bet_input = self.menus.get_bet_values()
         bet_amount = None
 
         try:
             bet_amount = int(bet_input)
+            #TODO send bet_amount to server and receive next state
             print(bet_amount)
             self.game_state = "PLAY"
-            #TODO send bet_amount to server and receive next state
+            
         except:
-            self.bet_text_box.placeholderText = "That was a bad bet. Try again."
-            self.bet_text_box.setText("")
+            self.menus.set_game_message("That was a bad bet. Try again.")
+            self.menus.set_bet_values()
 
     def insurance(self):
         print("Insurance")
@@ -313,7 +286,6 @@ class Game_Client(Client):
             self.draw_game()
 
             events = pygame.event.get()
-            pygame_widgets.update(events)
 
             for event in events:
 

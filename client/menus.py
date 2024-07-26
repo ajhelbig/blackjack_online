@@ -1,14 +1,14 @@
-import pygame
 import pygame_menu
 
 class Menus:
 
-    def __init__(self, window, sign_in, create_account, start_game, join_game, pause_leave_game, pause_resume):
+    def __init__(self, window, sign_in, create_account, start_game, join_game, pause_leave_game, pause_resume, place_bet):
 
         self.window = window
         self.window_size = window.get_size()
         self.menu_x_scale_factor = 0.65
         self.menu_y_scale_factor = 0.65
+        self.place_bet = place_bet
 
         self.default_game_message = 'This is where messages will appear.'
 
@@ -42,9 +42,9 @@ class Menus:
                                         self.window_size[1] * self.menu_y_scale_factor,
                                         theme=pygame_menu.themes.THEME_DARK)
         
-        self.game_message_menu = pygame_menu.Menu('Messages',
+        self.game_menu = pygame_menu.Menu('Blackjack',
                                         self.window_size[0], 
-                                        120,
+                                        self.window_size[1],
                                         theme=pygame_menu.themes.THEME_DARK)
 
         self.sign_in_menu.add.label(title='', label_id='sign in messager', wordwrap=True)
@@ -78,24 +78,62 @@ class Menus:
         self.pause_menu.add.button('Resume', pause_resume)
         self.pause_menu.add.button('Leave Game', pause_leave_game)
 
-        self.game_message_menu.add.label(title=self.default_game_message, label_id='game messager', wordwrap=True)
-        self.game_message_menu.set_absolute_position(0, 0)
+        self.game_menu.add.label(title=self.default_game_message, label_id='game messager', wordwrap=True)
+        self.game_menu.add.image(image_path='assets/images/game_bg.jpg', image_id='game background')
+        self.game_menu.set_absolute_position(0, 0)
 
         self.current_menu = self.sign_in_menu
 
-        self.menus = {"sign in": self.sign_in_menu, 
-                      "create account": self.create_account_menu, 
-                      "main": self.main_menu,
-                      "join": self.join_menu,
-                      "start": self.start_menu,
-                      "pause": self.pause_menu,
-                      "game message": self.game_message_menu}
+        self.menus = [self.sign_in_menu, 
+                      self.create_account_menu, 
+                      self.main_menu,
+                      self.join_menu,
+                      self.start_menu,
+                      self.pause_menu,
+                      self.game_menu]
+        
+        self.resize(self.window_size)
+
+    def get_bet_values(self):
+        bet_amount = self.game_menu.get_widget('game bet text').get_value()
+        return bet_amount
     
+    def set_bet_values(self):
+        bet = self.game_menu.get_widget('game bet text')
+        bet.clear()
+
+    def set_game_inputs(self, state):
+        if state == "BET":
+            self.game_menu.add.text_input('Bet Ammount: ', textinput_id='game bet text')
+            self.game_menu.add.button('Place Bet',  self.place_bet, 'game bet button')
+        
+        elif state == "PLAY":
+            self.game_menu.remove_widget('game bet text')
+            self.game_menu.remove_widget('game bet button')
+    
+    def set_game_message(self, msg=None):
+        if msg is None:
+            msg = self.default_game_message
+        
+        game_messager = self.game_menu.get_widget('game messager')
+        game_messager.set_title(msg)
+
+    def resize(self, window_size):
+        for menu in self.menus:
+            menu.resize(window_size[0] * self.menu_x_scale_factor, 
+                        window_size[1] * self.menu_y_scale_factor)
+            
+        self.game_menu.resize(window_size[0], window_size[1])
+        self.game_menu.set_absolute_position(0, 0)
+        bg = self.game_menu.get_widget('game background')
+        bg.resize(window_size[0], window_size[1] * 0.75)
+
     def switch_to_pause_menu(self):
         self.current_menu = self.pause_menu
 
-    def switch_to_game_message_menu(self):
-        self.current_menu = self.game_message_menu
+    def switch_to_game_menu(self, state):
+        self.set_game_inputs(state)
+        self.current_menu = self.game_menu
 
     def switch_to_main_menu(self):
         self.current_menu = self.main_menu
@@ -166,18 +204,3 @@ class Menus:
         p = self.join_menu.get_widget('join game password')
         u.clear()
         p.clear()
-
-    def set_game_message(self, msg=None):
-        if msg is None:
-            msg = self.default_game_message
-        
-        game_messager = self.game_message_menu.get_widget('game messager')
-        game_messager.set_title(msg)
-
-    def resize(self, window_size):
-        for menu in self.menus.values():
-            menu.resize(window_size[0] * self.menu_x_scale_factor, 
-                        window_size[1] * self.menu_y_scale_factor)
-            
-        self.game_message_menu.resize(window_size[0], 120)
-        self.game_message_menu.set_absolute_position(0, 0)
