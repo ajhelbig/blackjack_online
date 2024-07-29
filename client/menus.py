@@ -1,14 +1,16 @@
 import pygame_menu
+import pygame_menu.themes
 
 class Menus:
 
-    def __init__(self, window, sign_in, create_account, start_game, join_game, pause_leave_game, pause_resume, place_bet):
+    def __init__(self, window, sign_in, create_account, start_game,\
+                join_game, pause_leave_game, pause_resume, place_bet,\
+                insurance, double_down, hit, stand, split, surrender):
 
         self.window = window
         self.window_size = window.get_size()
         self.menu_x_scale_factor = 0.65
         self.menu_y_scale_factor = 0.65
-        self.place_bet = place_bet
 
         self.default_game_message = 'This is where messages will appear.'
 
@@ -22,7 +24,7 @@ class Menus:
                                         self.window_size[1] * self.menu_y_scale_factor,
                                         theme=pygame_menu.themes.THEME_DARK)
 
-        self.main_menu = pygame_menu.Menu('Break The Bank',
+        self.main_menu = pygame_menu.Menu('Blackjack',
                                         self.window_size[0] * self.menu_x_scale_factor, 
                                         self.window_size[1] * self.menu_y_scale_factor,
                                         theme=pygame_menu.themes.THEME_DARK)
@@ -41,11 +43,12 @@ class Menus:
                                         self.window_size[0] * self.menu_x_scale_factor, 
                                         self.window_size[1] * self.menu_y_scale_factor,
                                         theme=pygame_menu.themes.THEME_DARK)
-        
+
         self.game_menu = pygame_menu.Menu('Blackjack',
                                         self.window_size[0], 
                                         self.window_size[1],
-                                        theme=pygame_menu.themes.THEME_DARK)
+                                        theme=pygame_menu.themes.THEME_DARK,
+                                        overflow=False)
 
         self.sign_in_menu.add.label(title='', label_id='sign in messager', wordwrap=True)
         self.sign_in_menu.add.text_input('Username: ', textinput_id='username')
@@ -80,6 +83,28 @@ class Menus:
 
         self.game_menu.add.label(title=self.default_game_message, label_id='game messager', wordwrap=True)
         self.game_menu.add.image(image_path='assets/images/game_bg.jpg', image_id='game background')
+        self.game_menu.add.text_input('Bet Ammount: ', textinput_id='bet text')
+        self.game_menu.add.button(title='Place Bet', action=place_bet, button_id='bet button')
+
+        frame = self.game_menu.add.frame_h(width=self.window_size[0], 
+                                           height=self.window_size[1] * 0.1, 
+                                           frame_id='play buttons',
+                                           margin=(0,0))
+
+        frame.pack(widget=self.game_menu.add.button(title='Insurance', action=insurance, button_id='insurance button'), align='align-center', vertical_position='position-center', margin=(20,0))
+        frame.pack(widget=self.game_menu.add.button(title='Double Down', action=double_down, button_id='double down button'), align='align-center', vertical_position='position-center', margin=(20,0))
+        frame.pack(widget=self.game_menu.add.button(title='Hit', action=hit, button_id='hit button'), align='align-center', vertical_position='position-center', margin=(20,0))
+        frame.pack(widget=self.game_menu.add.button(title='Stand', action=stand, button_id='stand button'), align='align-center', vertical_position='position-center', margin=(20,0))
+        frame.pack(widget=self.game_menu.add.button(title='Split', action=split, button_id='split button'), align='align-center', vertical_position='position-center', margin=(20,0))
+        frame.pack(widget=self.game_menu.add.button(title='Surrender', action=surrender, button_id='surrender button'), align='align-center', vertical_position='position-center', margin=(20,0))
+
+        bet_text = self.game_menu.get_widget('bet text')
+        bet_text.hide()
+        bet_button = self.game_menu.get_widget('bet button')
+        bet_button.hide()
+
+        frame.hide()
+
         self.game_menu.set_absolute_position(0, 0)
 
         self.current_menu = self.sign_in_menu
@@ -95,21 +120,28 @@ class Menus:
         self.resize(self.window_size)
 
     def get_bet_values(self):
-        bet_amount = self.game_menu.get_widget('game bet text').get_value()
+        bet_amount = self.game_menu.get_widget('bet text').get_value()
         return bet_amount
     
     def set_bet_values(self):
-        bet = self.game_menu.get_widget('game bet text')
+        bet = self.game_menu.get_widget('bet text')
         bet.clear()
 
     def set_game_inputs(self, state):
         if state == "BET":
-            self.game_menu.add.text_input('Bet Ammount: ', textinput_id='game bet text')
-            self.game_menu.add.button('Place Bet',  self.place_bet, 'game bet button')
+            bet_text = self.game_menu.get_widget('bet text')
+            bet_text.show()
+            bet_button = self.game_menu.get_widget('bet button')
+            bet_button.show()
         
         elif state == "PLAY":
-            self.game_menu.remove_widget('game bet text')
-            self.game_menu.remove_widget('game bet button')
+            bet_text = self.game_menu.get_widget('bet text')
+            bet_text.hide()
+            bet_button = self.game_menu.get_widget('bet button')
+            bet_button.hide()
+
+            play_buttons = self.game_menu.get_widget('play buttons')
+            play_buttons.show()
     
     def set_game_message(self, msg=None):
         if msg is None:
@@ -131,7 +163,8 @@ class Menus:
     def switch_to_pause_menu(self):
         self.current_menu = self.pause_menu
 
-    def switch_to_game_menu(self, state):
+    def switch_to_game_menu(self, state, msg=None):
+        self.set_game_message(msg)
         self.set_game_inputs(state)
         self.current_menu = self.game_menu
 

@@ -33,7 +33,13 @@ class Game_Client(Client):
                            self.join_game,
                            self.pause_leave_game,
                            self.pause_resume,
-                           self.bet)
+                           self.bet,
+                           self.insurance,
+                           self.double_down,
+                           self.hit,
+                           self.stand,
+                           self.split,
+                           self.surrender)
 
     def pause_resume(self):
         self.menus.switch_to_game_menu("RESUME")
@@ -158,7 +164,6 @@ class Game_Client(Client):
                 self.in_game = True
                 self.game_state = resp["data"]["game_state"]
                 self.bank = resp["data"]["starting_bank"]
-                self.menus.set_game_message()
                 self.menus.switch_to_game_menu(self.game_state)
 
             elif resp["code"] == 'BAD_GAME_NAME':
@@ -196,7 +201,7 @@ class Game_Client(Client):
         path = None
 
         if bg == "MENU":
-            path = 'assets/images/game_bg.jpg'
+            path = 'assets/images/menu_bg.jpg'
         elif bg == "GAME":
             path = 'assets/images/game_bg.jpg'
 
@@ -232,8 +237,10 @@ class Game_Client(Client):
         try:
             bet_amount = int(bet_input)
             #TODO send bet_amount to server and receive next state
-            print(bet_amount)
+
             self.game_state = "PLAY"
+            self.menus.set_game_message("Bet placed.")
+            self.menus.set_game_inputs(self.game_state)
             
         except:
             self.menus.set_game_message("That was a bad bet. Try again.")
@@ -258,10 +265,7 @@ class Game_Client(Client):
         print("Surrender")
     
     def draw_bg(self):
-        if self.in_game:
-            self.window.blit(self.bg, (0, 120))
-        else:
-            self.window.blit(self.bg, (0, 0))
+        self.window.blit(self.bg, (0, 0))
 
     def listen_for_broadcast(self, timeout):
         for _ in range(timeout):
