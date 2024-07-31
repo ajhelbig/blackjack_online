@@ -236,38 +236,66 @@ class Game_Client(Client):
 
         try:
             bet_amount = int(bet_input)
-            #TODO send bet_amount to server and receive next state
+            msg = {"code": "PLACE_BET", 
+                   "response_codes": ["SUCCESS", "FAIL"], 
+                   "data": { "username": self.username, 
+                             "gamename": self.gamename, 
+                             "bet_amount": bet_amount}
+                   }
+            
+            resp = self.send_then_recv(msg)
 
-            self.game_state = "PLAY"
-            self.menus.set_game_message("Bet placed.")
-            self.menus.set_game_inputs(self.game_state)
+            if resp["code"] == "SUCCESS":
+                self.game_state = "PLAY"
+                self.menus.set_game_message("Bet placed.")
+                self.menus.set_game_inputs(self.game_state)
+            else:
+                self.menus.set_game_message("You already placed your bet.")
+                self.menus.set_game_inputs(self.game_state)
             
         except:
             self.menus.set_game_message("That was a bad bet. Try again.")
             self.menus.set_bet_values()
 
+    def play_action(self, action):
+        msg = {"code": action, 
+                   "response_codes": ["SUCCESS", "FAIL"], 
+                   "data": { "username": self.username, 
+                             "gamename": self.gamename}
+                }
+            
+        resp = self.send_then_recv(msg)
+
+        if resp["code"] == "SUCCESS":
+            self.game_state = resp["data"]["game_state"]
+            self.menus.set_game_message(resp["data"]["success_msg"])
+            self.menus.set_game_inputs(self.game_state)
+        else:
+            self.menus.set_game_message(resp["data"]["fail_msg"])
+            self.menus.set_game_inputs(self.game_state)
+
     def insurance(self):
-        print("Insurance")
+        self.play_action("INSURANCE")
 
     def double_down(self):
-        print("Double Down")
+        self.play_action("DOUBLE_DOWN")
 
     def hit(self):
-        print("Hit")
+        self.play_action("HIT")
 
     def stand(self):
-        print("Stand")
+        self.play_action("STAND")
 
     def split(self):
-        print("Split")
+        self.play_action("SPLIT")
 
     def surrender(self):
-        print("Surrender")
+        self.play_action("SURRENDER")
     
     def draw_bg(self):
         self.window.blit(self.bg, (0, 0))
 
-    def listen_for_broadcast(self, timeout):
+    def listen_for_broadcasts(self, timeout):
         for _ in range(timeout):
             try:
                 resp = json.loads(self.recv_q.pop(0))
@@ -275,6 +303,9 @@ class Game_Client(Client):
                 if resp["code"] == "BROADCAST":
                     if resp["data"]["type"] == "PLAYER_JOIN" or \
                        resp["data"]["type"] == "PLAYER_LEAVE":
+                        self.menus.set_game_message(resp["data"]["msg"])
+
+                    elif resp["data"]["type"] == "BET_UPDATE":
                         self.menus.set_game_message(resp["data"]["msg"])
                     
                 else:
@@ -305,7 +336,7 @@ class Game_Client(Client):
             
             self.menus.draw(events)
 
-            self.listen_for_broadcast(10)
+            self.listen_for_broadcasts(10)
             
             pygame.display.update()
 
