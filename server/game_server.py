@@ -136,9 +136,7 @@ class Game_Server(Server):
 
         try:
             username = msg["data"]["username"]
-            gamename = msg["data"]["gamename"]
             user = self.users[username]
-            game = self.active_games[gamename]
 
             broadcast_msg = {"code": "BROADCAST", 
                          "data": {"type": "PLAYER_LEAVE", 
@@ -161,6 +159,28 @@ class Game_Server(Server):
 
         if game.num_players == 0:
             del self.active_games[game.name]
+
+    def game_action(self, msg):
+        code = msg["code"]
+        username = msg["data"]["username"]
+        user = self.users[username]
+        gamename = msg["data"]["gamename"]
+        game = self.active_games[gamename]
+
+        if code == "PLACE_BET":
+            bet_amount = msg["data"]["bet_amount"]
+            ret_msg = game.place_bet(username, bet_amount)
+        
+        elif code == "HIT":
+            ret_msg = game.hit(username)
+
+        elif code == "STAND":
+            ret_msg = game.stand(username)
+
+        elif code == "DOUBLE_DOWN":
+            ret_msg = game.double_down(username)
+
+        user.send_q.append(json.dumps(ret_msg))
           
     def handle_existing_connection_read(self, sock):
         try:
@@ -180,6 +200,12 @@ class Game_Server(Server):
 
             elif msg["code"] == 'LEAVE_GAME':
                 self.leave_game(msg)
+            
+            elif msg["code"] == 'PLACE_BET' or \
+                 msg["code"] == 'HIT' or \
+                 msg["code"] == 'STAND' or \
+                 msg["code"] == 'DOUBLE_DOWN':
+                self.game_action(msg)
 
         except Exception as e:
             print(f"error: {e}")

@@ -1,7 +1,7 @@
 import pygame
 import json
 from base.client import Client
-from client.menus import Menus
+from client.ui import UI
 
 class Game_Client(Client):
 
@@ -17,16 +17,15 @@ class Game_Client(Client):
         self.current_menu = None
         self.active_inputs = None
         self.active_hand = None
+        self.dealer = None
         self.players = []
-        self.player_hands = []
-        self.dealer_hands = []
         self.window_size = (1200, 1000)
         self.set_bg("MENU")
 
         pygame.init()
 
         self.window = pygame.display.set_mode(self.window_size, pygame.RESIZABLE)
-        self.menus = Menus(self.window,
+        self.ui = UI(self.window,
                            self.sign_in,
                            self.create_account,
                            self.start_game,
@@ -34,22 +33,19 @@ class Game_Client(Client):
                            self.pause_leave_game,
                            self.pause_resume,
                            self.bet,
-                           self.insurance,
                            self.double_down,
                            self.hit,
-                           self.stand,
-                           self.split,
-                           self.surrender)
+                           self.stand)
 
     def pause_resume(self):
-        self.menus.switch_to_game_menu("RESUME")
+        self.ui.switch_to_game_menu("RESUME")
 
     def pause_leave_game(self):
-        self.menus.switch_to_main_menu()
+        self.ui.switch_to_main_menu()
         self.leave_game()
 
     def sign_in(self):
-        username, password = self.menus.get_sign_in_values()
+        username, password = self.ui.get_sign_in_values()
         display_msg = ''
 
         if not username or not password:
@@ -67,7 +63,7 @@ class Game_Client(Client):
             if resp["code"] == "SUCCESS":
                 self.username = username
                 self.bank = 0
-                self.menus.switch_to_main_menu()
+                self.ui.switch_to_main_menu()
 
             elif resp["code"] == "BAD_USER":
                 display_msg = 'There is no account with that username.\nTry creating an account.'
@@ -78,10 +74,10 @@ class Game_Client(Client):
             elif resp["code"] == "DUP_SIGN_IN":
                 display_msg = "You are already signed in."
             
-        self.menus.set_sign_in_values(display_msg)
+        self.ui.set_sign_in_values(display_msg)
 
     def create_account(self):
-        username, password1, password2 = self.menus.get_create_account_values()
+        username, password1, password2 = self.ui.get_create_account_values()
         display_msg = ''
 
         if not username or not password1 or not password2:
@@ -102,15 +98,15 @@ class Game_Client(Client):
             if resp["code"] == "SUCCESS":
                 self.username = username
                 self.bank = 0
-                self.menus.switch_to_main_menu()
+                self.ui.switch_to_main_menu()
 
             elif resp["code"] == "USER_TAKEN":
                 display_msg = 'That username is already taken.\nTry again.'
 
-        self.menus.set_create_account_values(display_msg)
+        self.ui.set_create_account_values(display_msg)
 
     def start_game(self):
-        gamename, game_password = self.menus.get_start_game_values()
+        gamename, game_password = self.ui.get_start_game_values()
         display_msg = ''
 
         if not game_password:
@@ -133,15 +129,15 @@ class Game_Client(Client):
                 self.in_game = True
                 self.game_state = resp["data"]["game_state"]
                 self.bank = resp["data"]["starting_bank"]
-                self.menus.switch_to_game_menu(self.game_state)
+                self.ui.switch_to_game_menu(self.game_state)
 
             elif resp["code"] == "BAD_GAME_NAME":
                 display_msg = 'Sorry that game name is already taken.\nTry again'
 
-        self.menus.set_start_game_values(display_msg)
+        self.ui.set_start_game_values(display_msg)
 
     def join_game(self):
-        gamename, game_password = self.menus.get_join_game_values()
+        gamename, game_password = self.ui.get_join_game_values()
         display_msg = ''
 
         if not game_password:
@@ -164,7 +160,7 @@ class Game_Client(Client):
                 self.in_game = True
                 self.game_state = resp["data"]["game_state"]
                 self.bank = resp["data"]["starting_bank"]
-                self.menus.switch_to_game_menu(self.game_state)
+                self.ui.switch_to_game_menu(self.game_state)
 
             elif resp["code"] == 'BAD_GAME_NAME':
                 display_msg = "That game does not exist.\nTry again."
@@ -175,7 +171,7 @@ class Game_Client(Client):
             elif resp["code"] == 'GAME_FULL':
                 display_msg = "That game is full."
 
-        self.menus.set_join_game_values(display_msg)
+        self.ui.set_join_game_values(display_msg)
 
     def leave_game(self):
         msg = {"code": "LEAVE_GAME",
@@ -187,7 +183,7 @@ class Game_Client(Client):
         resp = self.send_then_recv(msg)
 
         if resp["code"] == 'SUCCESS':
-            self.menus.switch_to_main_menu()
+            self.ui.switch_to_main_menu()
             self.gamename = None
             self.in_game = False
             self.game_state = None
@@ -210,8 +206,7 @@ class Game_Client(Client):
 
     def resize_ui(self):
         self.window_size = self.window.get_size()
-
-        self.menus.resize(self.window_size)
+        self.ui.resize(self.window_size)
         
     def draw_dealer_cards(self):
         pass
@@ -231,7 +226,7 @@ class Game_Client(Client):
             self.draw_player_cards()
 
     def bet(self):
-        bet_input = self.menus.get_bet_values()
+        bet_input = self.ui.get_bet_values()
         bet_amount = None
 
         try:
@@ -246,16 +241,14 @@ class Game_Client(Client):
             resp = self.send_then_recv(msg)
 
             if resp["code"] == "SUCCESS":
-                self.game_state = "PLAY"
-                self.menus.set_game_message("Bet placed.")
-                self.menus.set_game_inputs(self.game_state)
-            else:
-                self.menus.set_game_message("You already placed your bet.")
-                self.menus.set_game_inputs(self.game_state)
+                self.game_state = resp["data"]["game_state"]
+                
+            self.ui.set_game_message(resp["data"]["msg"])
+            self.ui.set_game_inputs(self.game_state)
             
         except:
-            self.menus.set_game_message("That was a bad bet. Try again.")
-            self.menus.set_bet_values()
+            self.ui.set_game_message("That was a bad bet. Try again.")
+            self.ui.set_bet_values()
 
     def play_action(self, action):
         msg = {"code": action, 
@@ -268,14 +261,10 @@ class Game_Client(Client):
 
         if resp["code"] == "SUCCESS":
             self.game_state = resp["data"]["game_state"]
-            self.menus.set_game_message(resp["data"]["success_msg"])
-            self.menus.set_game_inputs(self.game_state)
-        else:
-            self.menus.set_game_message(resp["data"]["fail_msg"])
-            self.menus.set_game_inputs(self.game_state)
 
-    def insurance(self):
-        self.play_action("INSURANCE")
+        self.ui.set_game_message(resp["data"]["msg"])
+        self.ui.set_game_inputs(self.game_state)
+        
 
     def double_down(self):
         self.play_action("DOUBLE_DOWN")
@@ -285,12 +274,6 @@ class Game_Client(Client):
 
     def stand(self):
         self.play_action("STAND")
-
-    def split(self):
-        self.play_action("SPLIT")
-
-    def surrender(self):
-        self.play_action("SURRENDER")
     
     def draw_bg(self):
         self.window.blit(self.bg, (0, 0))
@@ -301,12 +284,18 @@ class Game_Client(Client):
                 resp = json.loads(self.recv_q.pop(0))
 
                 if resp["code"] == "BROADCAST":
-                    if resp["data"]["type"] == "PLAYER_JOIN" or \
-                       resp["data"]["type"] == "PLAYER_LEAVE":
-                        self.menus.set_game_message(resp["data"]["msg"])
+                    if resp["data"]["type"] == "PLAYER_JOIN":
+                        #TODO initialize new player and add to players list
+                        pass
+                    
+                    elif resp["data"]["type"] == "PLAYER_LEAVE":
+                        #TODO delete player from players list
+                        pass
 
                     elif resp["data"]["type"] == "BET_UPDATE":
-                        self.menus.set_game_message(resp["data"]["msg"])
+                        pass
+
+                    self.ui.set_game_message(resp["data"]["msg"])
                     
                 else:
                     self.recv_q.append(json.dumps(resp))
@@ -332,11 +321,11 @@ class Game_Client(Client):
                     self.resize_ui()
                 
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    self.menus.switch_to_pause_menu()
+                    self.ui.switch_to_pause_menu()
             
-            self.menus.draw(events)
+            self.ui.draw(events)
 
-            self.listen_for_broadcasts(10)
+            self.listen_for_broadcasts(1)
             
             pygame.display.update()
 

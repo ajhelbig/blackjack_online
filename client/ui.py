@@ -1,11 +1,11 @@
 import pygame_menu
 import pygame_menu.themes
 
-class Menus:
+class UI:
 
     def __init__(self, window, sign_in, create_account, start_game,\
                 join_game, pause_leave_game, pause_resume, place_bet,\
-                insurance, double_down, hit, stand, split, surrender):
+                double_down, hit, stand):
 
         self.window = window
         self.window_size = window.get_size()
@@ -91,12 +91,9 @@ class Menus:
                                            frame_id='play buttons',
                                            margin=(0,0))
 
-        frame.pack(widget=self.game_menu.add.button(title='Insurance', action=insurance, button_id='insurance button'), align='align-center', vertical_position='position-center', margin=(20,0))
-        frame.pack(widget=self.game_menu.add.button(title='Double Down', action=double_down, button_id='double down button'), align='align-center', vertical_position='position-center', margin=(20,0))
-        frame.pack(widget=self.game_menu.add.button(title='Hit', action=hit, button_id='hit button'), align='align-center', vertical_position='position-center', margin=(20,0))
-        frame.pack(widget=self.game_menu.add.button(title='Stand', action=stand, button_id='stand button'), align='align-center', vertical_position='position-center', margin=(20,0))
-        frame.pack(widget=self.game_menu.add.button(title='Split', action=split, button_id='split button'), align='align-center', vertical_position='position-center', margin=(20,0))
-        frame.pack(widget=self.game_menu.add.button(title='Surrender', action=surrender, button_id='surrender button'), align='align-center', vertical_position='position-center', margin=(20,0))
+        frame.pack(widget=self.game_menu.add.button(title='Double Down', action=double_down, button_id='double down button'), align='align-center', vertical_position='position-center', margin=(50,0))
+        frame.pack(widget=self.game_menu.add.button(title='Hit', action=hit, button_id='hit button'), align='align-center', vertical_position='position-center', margin=(50,0))
+        frame.pack(widget=self.game_menu.add.button(title='Stand', action=stand, button_id='stand button'), align='align-center', vertical_position='position-center', margin=(50,0))
 
         bet_text = self.game_menu.get_widget('bet text')
         bet_text.hide()

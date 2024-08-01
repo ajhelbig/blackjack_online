@@ -1,15 +1,15 @@
 from blackjack.card import *
 from random import shuffle
 
-suits = ["H", "D", "C", "S"]
-symbols = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "K", "Q"]
+suits = ["hearts", "diamonds", "clubs", "spades"]
+symbols = ["ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "king", "queen"]
 values = [11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]
 
 class Deck:
 
 	def __init__(self, num_decks):
-		self.cards = list()
-		self.played_cards = list()
+		self.cards = []
+		self.played_cards = []
 
 		for _ in range(num_decks):
 			for suit in suits:
@@ -30,7 +30,7 @@ class Deck:
 		if len(self.cards) == 0:
 			self.cards = self.played_cards
 			self.shuffle()
-			self.played_cards = list()
+			self.played_cards = []
 
 		self.played_cards.append(self.cards.pop(0))
 

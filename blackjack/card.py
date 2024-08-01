@@ -11,4 +11,4 @@ class Card:
 
 	def stringify(self):
 
-		return f"{self.value} {self.suit} {self.symbol}"
+		return f"{self.symbol}_of_{self.suit}"
