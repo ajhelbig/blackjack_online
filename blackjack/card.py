@@ -6,9 +6,11 @@ class Card:
 		self.suit = ""
 		self.symbol = ""
 
-	def soft_ace(self):
+	def is_soft_ace(self):
 		self.value = 1
 
-	def stringify(self):
+	def is_hard_ace(self):
+		self.value = 11
 
+	def stringify(self):
 		return f"{self.symbol}_of_{self.suit}"

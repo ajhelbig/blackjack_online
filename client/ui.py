@@ -139,7 +139,14 @@ class UI:
 
             play_buttons = self.game_menu.get_widget('play buttons')
             play_buttons.show()
-    
+        else:
+            bet_text = self.game_menu.get_widget('bet text')
+            bet_text.hide()
+            bet_button = self.game_menu.get_widget('bet button')
+            bet_button.hide()
+            play_buttons = self.game_menu.get_widget('play buttons')
+            play_buttons.hide()
+
     def set_game_message(self, msg=None):
         if msg is None:
             msg = self.default_game_message

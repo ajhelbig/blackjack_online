@@ -21,6 +21,8 @@ class Game_Server(Server):
         self.users = dict()
         self.active_games = dict()
 
+        self.game_actions = ['PLACE_BET', 'HIT', 'STAND', 'DOUBLE_DOWN']
+
     def handle_new_connection(self, sock):
         client_socket, client_address = sock.accept()
         print(f"New connection from {client_address}")
@@ -166,10 +168,34 @@ class Game_Server(Server):
         user = self.users[username]
         gamename = msg["data"]["gamename"]
         game = self.active_games[gamename]
+        ret_msg = None
+
+        ret_msg = {"code": None, 
+                   "data": {"msg": None, 
+                            "game_state": game.state,
+                            "type": None,
+                            "broadcast": False}}
 
         if code == "PLACE_BET":
             bet_amount = msg["data"]["bet_amount"]
-            ret_msg = game.place_bet(username, bet_amount)
+            res = game.place_bet(username, bet_amount)
+
+            if res == "BET_ALREADY_PLACED":
+                ret_msg["code"] = "FAIL"
+                ret_msg["data"]["msg"] = "Bet has already been placed."
+            
+            elif res == "SUCCESS":
+                ret_msg["code"] = "SUCCESS"
+                ret_msg["data"]['broadcast'] = True
+                ret_msg["data"]["type"] = "BET_UPDATE"
+                ret_msg["data"]["game_state"] = game.state
+                
+                if game.state == "BET":
+                    ret_msg["data"]["msg"] = "Bet has been placed. Waiting for other players to bet."
+                    ret_msg['data']['game_state'] = "AWAITING_BETS"
+                
+                else:
+                    ret_msg["data"]["msg"] = "All bets have been placed."
         
         elif code == "HIT":
             ret_msg = game.hit(username)
@@ -181,6 +207,15 @@ class Game_Server(Server):
             ret_msg = game.double_down(username)
 
         user.send_q.append(json.dumps(ret_msg))
+
+        if ret_msg["data"]["broadcast"]:
+            ret_msg["code"] = "BROADCAST"
+
+            if game.state == "BET":
+                    ret_msg["data"]["msg"] = f"{username} placed their bet. Waiting for other players to bet."
+                    ret_msg['data']['game_state'] = game.state
+
+            user.broadcast(self.users, ret_msg)
           
     def handle_existing_connection_read(self, sock):
         try:
@@ -201,10 +236,7 @@ class Game_Server(Server):
             elif msg["code"] == 'LEAVE_GAME':
                 self.leave_game(msg)
             
-            elif msg["code"] == 'PLACE_BET' or \
-                 msg["code"] == 'HIT' or \
-                 msg["code"] == 'STAND' or \
-                 msg["code"] == 'DOUBLE_DOWN':
+            elif msg["code"] in self.game_actions:
                 self.game_action(msg)
 
         except Exception as e:

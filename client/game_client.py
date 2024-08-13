@@ -265,7 +265,6 @@ class Game_Client(Client):
         self.ui.set_game_message(resp["data"]["msg"])
         self.ui.set_game_inputs(self.game_state)
         
-
     def double_down(self):
         self.play_action("DOUBLE_DOWN")
 
@@ -284,6 +283,8 @@ class Game_Client(Client):
                 resp = json.loads(self.recv_q.pop(0))
 
                 if resp["code"] == "BROADCAST":
+                    #TODO update ui for all broadcast actions
+
                     if resp["data"]["type"] == "PLAYER_JOIN":
                         #TODO initialize new player and add to players list
                         pass
@@ -293,8 +294,9 @@ class Game_Client(Client):
                         pass
 
                     elif resp["data"]["type"] == "BET_UPDATE":
-                        pass
-
+                        self.game_state = resp['data']['game_state']
+                        self.ui.set_game_inputs(self.game_state)
+                        
                     self.ui.set_game_message(resp["data"]["msg"])
                     
                 else:
@@ -322,10 +324,10 @@ class Game_Client(Client):
                 
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     self.ui.switch_to_pause_menu()
-            
-            self.ui.draw(events)
 
             self.listen_for_broadcasts(1)
+
+            self.ui.draw(events)
             
             pygame.display.update()
 

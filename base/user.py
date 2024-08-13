@@ -29,7 +29,7 @@ class User:
             return None
         
     def broadcast(self, users, msg):
-        for other_player in self.game.players:
-                        if other_player != self.name:
-                            other_user = users[other_player]
+        for player in self.game.players.keys():
+                        if player != self.name:
+                            other_user = users[player]
                             other_user.send_q.append(json.dumps(msg))

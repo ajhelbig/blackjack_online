@@ -1,4 +1,5 @@
 from blackjack.player import Blackjack_Player
+from blackjack.deck import Deck
 
 class Game:
 
@@ -12,6 +13,8 @@ class Game:
         self.house_bank = 1000
         self.player_starting_bank = 0
         self.state = "BET"
+
+        self.deck = Deck(num_decks=1)
 
     def good_password(self, password):
         return self.password == password
@@ -33,35 +36,44 @@ class Game:
         print(f"Players in game: {self.num_players}")
 
     def place_bet(self, username, bet):
-        ret_msg = {"code": None, 
-                   "data": {"msg": None, 
-                            "game_state": self.state}}
-        
         player = self.players[username]
 
         if player.bet is not None:
-            ret_msg["code"] = "FAIL"
-            ret_msg["data"]["msg"] = "Bet has already been placed."
-        else:
-            player.place_bet(bet)
-            self.bets_placed += 1
-            ret_msg["code"] = "SUCCESS"
-
-            if self.bets_placed < self.num_players:
-                ret_msg["data"]["msg"] = "Bet has been placed. Waiting for other players to bet."
-            else:
-                #TODO deal cards to everyone
-                self.state = "PLAY"
-                ret_msg["data"]["msg"] = "Bet has been placed."
-                ret_msg["data"]["game_state"] = self.state
+            return "BET_ALREADY_PLACED"
         
-        return ret_msg
+        player.place_bet(bet)
+        self.bets_placed += 1
+
+        if self.bets_placed == self.num_players:
+            self.state = "PLAY"
+
+        return "SUCCESS"
+    
+    def deal(self):
+        for player in self.players.values():
+            player.get_new_hand(self.deck)
+
+        return "SUCCESS"
 
     def hit(self, username):
-        pass
+        player = self.players[username]
+        player.hit(self.deck)
+
+        if player.busted:
+            return "BUSTED"
+        
+        return "SUCCESS"
 
     def stand(self, username):
-        pass
+        player = self.players[username]
+        player.stand()
+        return "SUCCESS"
 
     def double_down(self, username):
-        pass
+        player = self.players[username]
+        player.double_down(self.deck)
+
+        if player.busted:
+            return "BUSTED"
+
+        return "SUCCESS"
