@@ -189,6 +189,7 @@ class Game_Server(Server):
                 ret_msg["data"]['broadcast'] = True
                 ret_msg["data"]["type"] = "BET_UPDATE"
                 ret_msg["data"]["game_state"] = game.state
+                ret_msg["data"]["game_data"] = None
                 
                 if game.state == "BET":
                     ret_msg["data"]["msg"] = "Bet has been placed. Waiting for other players to bet."
@@ -196,6 +197,7 @@ class Game_Server(Server):
                 
                 else:
                     ret_msg["data"]["msg"] = "All bets have been placed."
+                    ret_msg["data"]["game_data"] = game.get_data()
         
         elif code == "HIT":
             ret_msg = game.hit(username)

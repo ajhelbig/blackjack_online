@@ -15,10 +15,7 @@ class Game_Client(Client):
         self.username = None
         self.bank = None
         self.current_menu = None
-        self.active_inputs = None
-        self.active_hand = None
-        self.dealer = None
-        self.players = []
+        self.game_data = None
         self.window_size = (1200, 1000)
         self.set_bg("MENU")
 
@@ -207,23 +204,6 @@ class Game_Client(Client):
     def resize_ui(self):
         self.window_size = self.window.get_size()
         self.ui.resize(self.window_size)
-        
-    def draw_dealer_cards(self):
-        pass
-
-    def draw_other_players_cards(self):
-        pass
-
-    def draw_player_cards(self):
-        pass
-
-    def draw_game(self):
-        if self.in_game:
-            self.draw_dealer_cards()
-
-            self.draw_other_players_cards()
-
-            self.draw_player_cards()
 
     def bet(self):
         bet_input = self.ui.get_bet_values()
@@ -242,6 +222,7 @@ class Game_Client(Client):
 
             if resp["code"] == "SUCCESS":
                 self.game_state = resp["data"]["game_state"]
+                self.game_data = resp["data"]["game_data"]
                 
             self.ui.set_game_message(resp["data"]["msg"])
             self.ui.set_game_inputs(self.game_state)
@@ -261,6 +242,7 @@ class Game_Client(Client):
 
         if resp["code"] == "SUCCESS":
             self.game_state = resp["data"]["game_state"]
+            self.game_data = resp["data"]["game_data"]
 
         self.ui.set_game_message(resp["data"]["msg"])
         self.ui.set_game_inputs(self.game_state)
@@ -295,6 +277,7 @@ class Game_Client(Client):
 
                     elif resp["data"]["type"] == "BET_UPDATE":
                         self.game_state = resp['data']['game_state']
+                        self.game_data = resp['data']['game_data']
                         self.ui.set_game_inputs(self.game_state)
                         
                     self.ui.set_game_message(resp["data"]["msg"])
@@ -309,7 +292,6 @@ class Game_Client(Client):
         while not stop:
 
             self.draw_bg()
-            self.draw_game()
 
             events = pygame.event.get()
 
@@ -327,7 +309,7 @@ class Game_Client(Client):
 
             self.listen_for_broadcasts(1)
 
-            self.ui.draw(events)
+            self.ui.draw(events, self.game_data)
             
             pygame.display.update()
 

@@ -1,5 +1,6 @@
 import pygame_menu
 import pygame_menu.themes
+import pygame
 
 class UI:
 
@@ -175,11 +176,75 @@ class UI:
     def switch_to_main_menu(self):
         self.current_menu = self.main_menu
 
-    def draw(self, events):
+    def draw_dealer_cards(self, game_data):
+        card_path_fragments = game_data[0]["hands"].split()
+        root = 'assets/images/cards/'
+        card_scale_factor = 0.35
+        num_cards_drawn = 0
+        num_cards = len(card_path_fragments)
+
+        game_bg = self.game_menu.get_widget('game background')
+        game_bg_pos = game_bg.get_position()
+        game_bg_size = game_bg.get_size()
+
+        for frag in card_path_fragments:#TODO cache pygame image
+            card = pygame.image.load(root + frag + '.png')
+
+            card_width = card.get_rect().width * card_scale_factor
+            card_height = card.get_rect().height * card_scale_factor
+
+            card = pygame.transform.scale(card, (card_width, card_height))
+
+            card_offset = (game_bg_size[0] - (card_width * num_cards)) / 2
+
+            self.window.blit(card, (card_offset + card_width * num_cards_drawn, game_bg_pos[1]))
+            num_cards_drawn += 1 
+
+    def draw_other_players_cards(self):
+        pass
+
+    def draw_player_cards(self, game_data):
+        card_path_fragments = game_data[1]["hands"].split()
+        root = 'assets/images/cards/'
+        card_scale_factor = 0.35
+        num_cards_drawn = 0
+        num_cards = len(card_path_fragments)
+
+        game_bg = self.game_menu.get_widget('game background')
+        game_bg_pos = game_bg.get_position()
+        game_bg_size = game_bg.get_size()
+
+        for frag in card_path_fragments:#TODO cache pygame image
+            card = pygame.image.load(root + frag + '.png')
+
+            card_width = card.get_rect().width * card_scale_factor
+            card_height = card.get_rect().height * card_scale_factor
+
+            card = pygame.transform.scale(card, (card_width, card_height))
+
+            card_offset_x = (game_bg_size[0] - (card_width * num_cards)) / 2
+            card_offset_y = game_bg_pos[1] + game_bg_size[1] - card_height
+
+            self.window.blit(card, (card_offset_x + card_width * num_cards_drawn, card_offset_y))
+            num_cards_drawn += 1 
+
+    def draw_game(self, game_data):
+            self.draw_dealer_cards(game_data)
+
+            self.draw_other_players_cards()
+
+            self.draw_player_cards(game_data)
+
+    def draw(self, events, game_data):
         try:
             if self.current_menu.is_enabled():
+
                 self.current_menu.update(events)
                 self.current_menu.draw(self.window)
+
+                if game_data and self.current_menu is self.game_menu:
+                    self.draw_game(game_data)
+
         except:
             pass
         

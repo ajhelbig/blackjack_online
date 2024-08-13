@@ -26,3 +26,21 @@ class Blackjack_Player(Player):
 	def double_down(self, deck):
 		self.bet *= 2
 		self.hit(deck)
+
+	def stringify_hands(self):
+		hands_str = ""
+		for hand in self.hands:
+			hands_str += hand.stringify()
+
+		return hands_str
+
+	def get_data(self):
+		player_data = {
+			"name": self.name,
+			"bank": self.bank,
+			"bet": self.bet,
+			"hands": self.stringify_hands()
+		}
+
+		return player_data
+

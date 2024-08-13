@@ -7,11 +7,11 @@ class Game:
         self.name = name
         self.password = password
         self.players = {}
+        self.dealer = Blackjack_Player("Dealer", 1000)
         self.bets_placed = 0
         self.num_players = 0
         self.max_num_players = 7
-        self.house_bank = 1000
-        self.player_starting_bank = 0
+        self.player_starting_bank = 500
         self.state = "BET"
 
         self.deck = Deck(num_decks=1)
@@ -46,14 +46,25 @@ class Game:
 
         if self.bets_placed == self.num_players:
             self.state = "PLAY"
+            self.deal()
 
         return "SUCCESS"
+    
+    def get_data(self):
+        game_data = []
+
+        game_data.append(self.dealer.get_data())
+
+        for player in self.players.values():
+            game_data.append(player.get_data())
+
+        return game_data
     
     def deal(self):
         for player in self.players.values():
             player.get_new_hand(self.deck)
 
-        return "SUCCESS"
+        self.dealer.get_new_hand(self.deck)
 
     def hit(self, username):
         player = self.players[username]

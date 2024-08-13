@@ -23,13 +23,12 @@ class Deck:
 
 					self.cards.append(new_card)
 
-	def shuffle(self):
 		shuffle(self.cards)
 
 	def pop(self):
 		if len(self.cards) == 0:
 			self.cards = self.played_cards
-			self.shuffle()
+			shuffle(self.cards)
 			self.played_cards = []
 
 		self.played_cards.append(self.cards.pop(0))
