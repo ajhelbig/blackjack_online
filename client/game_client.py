@@ -309,7 +309,7 @@ class Game_Client(Client):
 
             self.listen_for_broadcasts(1)
 
-            self.ui.draw(events, self.game_data)
+            self.ui.draw(events, self.game_data, self.username)
             
             pygame.display.update()
 

@@ -1,6 +1,7 @@
 import pygame_menu
 import pygame_menu.themes
 import pygame
+from blackjack.deck import Deck
 
 class UI:
 
@@ -12,6 +13,12 @@ class UI:
         self.window_size = window.get_size()
         self.menu_x_scale_factor = 0.65
         self.menu_y_scale_factor = 0.65
+        self.card_scale_factor = 0.35
+        self.card_width = 0
+        self.card_height = 0
+        self.card_images = None
+        
+        self.load_card_images()
 
         self.default_game_message = 'This is where messages will appear.'
 
@@ -117,6 +124,25 @@ class UI:
         
         self.resize(self.window_size)
 
+    def load_card_images(self):
+        cards = Deck(num_decks=1).stringify().split()
+        root = 'assets/images/cards/'
+
+        card_images = {}
+
+        for card in cards:
+            card_path = root + card + '.png'
+            card_image = pygame.image.load(card_path)
+
+            self.card_width = card_image.get_rect().width * self.card_scale_factor
+            self.card_height = card_image.get_rect().height * self.card_scale_factor
+
+            card_image = pygame.transform.scale(card_image, (self.card_width, self.card_height))
+
+            card_images[card] = card_image
+        
+        self.card_images = card_images
+
     def get_bet_values(self):
         bet_amount = self.game_menu.get_widget('bet text').get_value()
         return bet_amount
@@ -164,6 +190,7 @@ class UI:
         self.game_menu.set_absolute_position(0, 0)
         bg = self.game_menu.get_widget('game background')
         bg.resize(window_size[0], window_size[1] * 0.75)
+        self.window_size = window_size
 
     def switch_to_pause_menu(self):
         self.current_menu = self.pause_menu
@@ -176,66 +203,57 @@ class UI:
     def switch_to_main_menu(self):
         self.current_menu = self.main_menu
 
-    def draw_dealer_cards(self, game_data):
-        card_path_fragments = game_data[0]["hands"].split()
-        root = 'assets/images/cards/'
-        card_scale_factor = 0.35
-        num_cards_drawn = 0
-        num_cards = len(card_path_fragments)
+    def draw_dealer(self, dealer):
+        dealer_cards = dealer['hands'].split()
+        num_cards = len(dealer_cards)
 
         game_bg = self.game_menu.get_widget('game background')
         game_bg_pos = game_bg.get_position()
-        game_bg_size = game_bg.get_size()
 
-        for frag in card_path_fragments:#TODO cache pygame image
-            card = pygame.image.load(root + frag + '.png')
+        card_offset_x = (self.window_size[0] - (self.card_width * num_cards)) / 2
+        card_offset_y = game_bg_pos[1]
 
-            card_width = card.get_rect().width * card_scale_factor
-            card_height = card.get_rect().height * card_scale_factor
+        self.draw_cards(dealer_cards, card_offset_x, card_offset_y)
 
-            card = pygame.transform.scale(card, (card_width, card_height))
+    def draw_players(self, players, username):
+        num_other_players_drawn = 0
+        for player in players:
+            player_cards = player['hands'].split()
+            num_cards = len(player_cards)
 
-            card_offset = (game_bg_size[0] - (card_width * num_cards)) / 2
+            game_bg = self.game_menu.get_widget('game background')
+            game_bg_pos = game_bg.get_position()
+            game_bg_size = game_bg.get_size()
 
-            self.window.blit(card, (card_offset + card_width * num_cards_drawn, game_bg_pos[1]))
-            num_cards_drawn += 1 
+            card_offset_x = game_bg_pos[0]
+            card_offset_y = game_bg_pos[1]
 
-    def draw_other_players_cards(self):
-        pass
+            if player["name"] == username:
+                card_offset_x = (self.window_size[0] - (self.card_width * num_cards)) / 2
+                card_offset_y = game_bg_pos[1] + game_bg_size[1] - self.card_height
+            else:
+                if num_other_players_drawn % 2:
+                        card_offset_x = self.window_size[0] - (num_cards * self.card_width)
+                    
+                if num_other_players_drawn >= 2:
+                    card_offset_y = game_bg_pos[1] + game_bg_size[1] - self.card_height
 
-    def draw_player_cards(self, game_data):
-        card_path_fragments = game_data[1]["hands"].split()
-        root = 'assets/images/cards/'
-        card_scale_factor = 0.35
+                num_other_players_drawn += 1
+
+            self.draw_cards(player_cards, card_offset_x, card_offset_y)
+
+    def draw_cards(self, cards, card_offset_x, card_offset_y):
         num_cards_drawn = 0
-        num_cards = len(card_path_fragments)
-
-        game_bg = self.game_menu.get_widget('game background')
-        game_bg_pos = game_bg.get_position()
-        game_bg_size = game_bg.get_size()
-
-        for frag in card_path_fragments:#TODO cache pygame image
-            card = pygame.image.load(root + frag + '.png')
-
-            card_width = card.get_rect().width * card_scale_factor
-            card_height = card.get_rect().height * card_scale_factor
-
-            card = pygame.transform.scale(card, (card_width, card_height))
-
-            card_offset_x = (game_bg_size[0] - (card_width * num_cards)) / 2
-            card_offset_y = game_bg_pos[1] + game_bg_size[1] - card_height
-
-            self.window.blit(card, (card_offset_x + card_width * num_cards_drawn, card_offset_y))
+        for c in cards:
+            card = self.card_images[c]
+            self.window.blit(card, (card_offset_x + self.card_width * num_cards_drawn, card_offset_y))
             num_cards_drawn += 1 
 
-    def draw_game(self, game_data):
-            self.draw_dealer_cards(game_data)
+    def draw_game(self, game_data, username):
+            self.draw_dealer(game_data[0])
+            self.draw_players(game_data[1:], username)
 
-            self.draw_other_players_cards()
-
-            self.draw_player_cards(game_data)
-
-    def draw(self, events, game_data):
+    def draw(self, events, game_data, username):
         try:
             if self.current_menu.is_enabled():
 
@@ -243,7 +261,7 @@ class UI:
                 self.current_menu.draw(self.window)
 
                 if game_data and self.current_menu is self.game_menu:
-                    self.draw_game(game_data)
+                    self.draw_game(game_data, username)
 
         except:
             pass

@@ -35,7 +35,11 @@ class Deck:
 
 		return self.played_cards[-1]
 
-	def print_deck(self):
+	def stringify(self):
+		deck_str = ""
+
 		for card in self.cards:
-			print(card.stringify())
+			deck_str += " " + card.stringify() + " "
+
+		return deck_str
 

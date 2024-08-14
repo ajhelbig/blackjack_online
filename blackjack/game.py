@@ -10,7 +10,7 @@ class Game:
         self.dealer = Blackjack_Player("Dealer", 1000)
         self.bets_placed = 0
         self.num_players = 0
-        self.max_num_players = 7
+        self.max_num_players = 5
         self.player_starting_bank = 500
         self.state = "BET"
 
