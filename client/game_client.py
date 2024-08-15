@@ -185,6 +185,8 @@ class Game_Client(Client):
             self.in_game = False
             self.game_state = None
             self.bank = None
+            self.game_data = None
+            #TODO clear game widgets
 
     def send_then_recv(self, json_dict):
         self.send_q.append(json.dumps(json_dict))
@@ -244,7 +246,12 @@ class Game_Client(Client):
             self.game_state = resp["data"]["game_state"]
             self.game_data = resp["data"]["game_data"]
 
-        self.ui.set_game_message(resp["data"]["msg"])
+        try:
+            if resp["data"]["player_msg"] is not None:
+                self.ui.set_game_message(resp["data"]["player_msg"])
+        except:
+            self.ui.set_game_message(resp["data"]["msg"])
+
         self.ui.set_game_inputs(self.game_state)
         
     def double_down(self):
@@ -275,12 +282,16 @@ class Game_Client(Client):
                         #TODO delete player from players list
                         pass
 
-                    elif resp["data"]["type"] == "BET_UPDATE":
+                    elif resp["data"]["type"] in ["BET_UPDATE", "PLAYER_UPDATE"]:
                         self.game_state = resp['data']['game_state']
                         self.game_data = resp['data']['game_data']
                         self.ui.set_game_inputs(self.game_state)
-                        
-                    self.ui.set_game_message(resp["data"]["msg"])
+
+                    try:
+                        if resp["data"]["broadcast_msg"] is not None:
+                            self.ui.set_game_message(resp["data"]["broadcast_msg"])
+                    except:
+                        self.ui.set_game_message(resp["data"]["msg"])
                     
                 else:
                     self.recv_q.append(json.dumps(resp))

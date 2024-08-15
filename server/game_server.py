@@ -162,6 +162,60 @@ class Game_Server(Server):
         if game.num_players == 0:
             del self.active_games[game.name]
 
+    def place_bet(self, msg, username, game, ret_msg):
+        bet_amount = msg["data"]["bet_amount"]
+        res = game.place_bet(username, bet_amount)
+
+        if res == "BET_ALREADY_PLACED":
+            ret_msg["code"] = "FAIL"
+            ret_msg["data"]["msg"] = "Bet has already been placed."
+            return
+        
+        ret_msg["code"] = "SUCCESS"
+        ret_msg["data"]['broadcast'] = True
+        ret_msg["data"]["type"] = "BET_UPDATE"
+        ret_msg["data"]["game_state"] = game.state
+        ret_msg["data"]["game_data"] = None
+        
+        if game.state == "BET":
+            ret_msg["data"]["msg"] = "Bet has been placed. Waiting for other players to bet."
+        
+        else:
+            player = game.get_player_turn()
+            ret_msg["data"]["msg"] = f"All bets have been placed. Its {player}'s turn."
+            ret_msg["data"]["game_data"] = game.get_data()
+
+    def hit(self, username, game, ret_msg):
+        res = game.hit(username)
+
+        if res == "NOT_PLAYERS_TURN":
+            player = game.get_player_turn()
+            ret_msg['code'] = 'FAIL'
+            ret_msg['data']['player_msg'] = f"It's not your turn. It's {player}'s turn."
+            ret_msg['data']['broadcast_msg'] = None
+            return
+
+        ret_msg["code"] = "SUCCESS"
+        ret_msg["data"]['broadcast'] = True
+        ret_msg['data']['type'] = "PLAYER_UPDATE"
+        ret_msg["data"]["game_state"] = game.state
+        ret_msg["data"]["game_data"] = None
+
+        if res == "BUSTED":
+            if game.state == "PLAY":
+                ret_msg['data']['player_msg'] = "You busted!"
+                ret_msg['data']['broadcast_msg'] = f"{username} busted! It's now {game.get_player_turn()}'s turn!"
+            else:
+                ret_msg['data']['player_msg'] = "You busted! It's now the dealers turn."
+                ret_msg['data']['broadcast_msg'] = f"{username} busted! It's now the dealers turn!"
+            
+            ret_msg['data']["game_data"] = game.get_data()
+
+        elif res == "SUCCESS":
+            ret_msg['data']['player_msg'] = None
+            ret_msg['data']['broadcast_msg'] = f"{username} hit!"
+            ret_msg['data']["game_data"] = game.get_data()
+
     def game_action(self, msg):
         code = msg["code"]
         username = msg["data"]["username"]
@@ -177,36 +231,16 @@ class Game_Server(Server):
                             "broadcast": False}}
 
         if code == "PLACE_BET":
-            bet_amount = msg["data"]["bet_amount"]
-            res = game.place_bet(username, bet_amount)
-
-            if res == "BET_ALREADY_PLACED":
-                ret_msg["code"] = "FAIL"
-                ret_msg["data"]["msg"] = "Bet has already been placed."
-            
-            elif res == "SUCCESS":
-                ret_msg["code"] = "SUCCESS"
-                ret_msg["data"]['broadcast'] = True
-                ret_msg["data"]["type"] = "BET_UPDATE"
-                ret_msg["data"]["game_state"] = game.state
-                ret_msg["data"]["game_data"] = None
-                
-                if game.state == "BET":
-                    ret_msg["data"]["msg"] = "Bet has been placed. Waiting for other players to bet."
-                    ret_msg['data']['game_state'] = "AWAITING_BETS"
-                
-                else:
-                    ret_msg["data"]["msg"] = "All bets have been placed."
-                    ret_msg["data"]["game_data"] = game.get_data()
+            self.place_bet(msg, username, game, ret_msg)
         
         elif code == "HIT":
-            ret_msg = game.hit(username)
+            self.hit(username, game, ret_msg)
 
         elif code == "STAND":
-            ret_msg = game.stand(username)
+            self.stand(username, game, ret_msg)
 
         elif code == "DOUBLE_DOWN":
-            ret_msg = game.double_down(username)
+            self.double_down(username, game, ret_msg)
 
         user.send_q.append(json.dumps(ret_msg))
 
@@ -214,9 +248,9 @@ class Game_Server(Server):
             ret_msg["code"] = "BROADCAST"
 
             if game.state == "BET":
-                    ret_msg["data"]["msg"] = f"{username} placed their bet. Waiting for other players to bet."
+                    ret_msg["data"]["msg"] = f"{username} placed their bet! Waiting for other players to bet."
                     ret_msg['data']['game_state'] = game.state
-
+                    
             user.broadcast(self.users, ret_msg)
           
     def handle_existing_connection_read(self, sock):

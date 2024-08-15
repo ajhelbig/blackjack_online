@@ -235,7 +235,7 @@ class UI:
                 if num_other_players_drawn % 2:
                         card_offset_x = self.window_size[0] - (num_cards * self.card_width)
                     
-                if num_other_players_drawn >= 2:
+                if num_other_players_drawn > 1:
                     card_offset_y = game_bg_pos[1] + game_bg_size[1] - self.card_height
 
                 num_other_players_drawn += 1

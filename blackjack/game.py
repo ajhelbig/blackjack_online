@@ -10,12 +10,25 @@ class Game:
         self.dealer = Blackjack_Player("Dealer", 1000)
         self.bets_placed = 0
         self.num_players = 0
+        self.player_turn = 0
         self.max_num_players = 5
         self.player_starting_bank = 500
         self.state = "BET"
 
         self.deck = Deck(num_decks=1)
 
+    def next_player_turn(self):
+        self.player_turn += 1
+        self.player_turn %= self.num_players
+
+        if self.player_turn == 0:
+            return None
+
+        return self.player_turn
+    
+    def get_player_turn(self):
+        return self.players[list(self.players.keys())[self.player_turn]].name
+    
     def good_password(self, password):
         return self.password == password
 
@@ -67,13 +80,19 @@ class Game:
         self.dealer.get_new_hand(self.deck)
 
     def hit(self, username):
-        player = self.players[username]
-        player.hit(self.deck)
 
-        if player.busted:
-            return "BUSTED"
-        
-        return "SUCCESS"
+        if list(self.players.keys())[self.player_turn] == username:
+            player = self.players[username]
+            player.hit(self.deck)
+
+            if player.busted:
+                if self.next_player_turn() is None:
+                    self.state = "DEALER_PLAY"
+                return "BUSTED"
+            
+            return "SUCCESS"
+        else:
+            return "NOT_PLAYERS_TURN"
 
     def stand(self, username):
         player = self.players[username]
