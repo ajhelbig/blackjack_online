@@ -199,22 +199,70 @@ class Game_Server(Server):
         ret_msg["data"]['broadcast'] = True
         ret_msg['data']['type'] = "PLAYER_UPDATE"
         ret_msg["data"]["game_state"] = game.state
-        ret_msg["data"]["game_data"] = None
+        ret_msg['data']["game_data"] = game.get_data()
 
         if res == "BUSTED":
             if game.state == "PLAY":
-                ret_msg['data']['player_msg'] = "You busted!"
+                ret_msg['data']['player_msg'] = f"You busted! It's now {game.get_player_turn()}'s turn!"
                 ret_msg['data']['broadcast_msg'] = f"{username} busted! It's now {game.get_player_turn()}'s turn!"
             else:
                 ret_msg['data']['player_msg'] = "You busted! It's now the dealers turn."
                 ret_msg['data']['broadcast_msg'] = f"{username} busted! It's now the dealers turn!"
-            
-            ret_msg['data']["game_data"] = game.get_data()
 
         elif res == "SUCCESS":
             ret_msg['data']['player_msg'] = None
             ret_msg['data']['broadcast_msg'] = f"{username} hit!"
-            ret_msg['data']["game_data"] = game.get_data()
+
+    def stand(self, username, game, ret_msg):
+        res = game.stand(username)
+
+        if res == "NOT_PLAYERS_TURN":
+            player = game.get_player_turn()
+            ret_msg['code'] = 'FAIL'
+            ret_msg['data']['player_msg'] = f"It's not your turn. It's {player}'s turn."
+            ret_msg['data']['broadcast_msg'] = None
+            return
+
+        ret_msg["code"] = "SUCCESS"
+        ret_msg["data"]['broadcast'] = True
+        ret_msg['data']['type'] = "PLAYER_UPDATE"
+        ret_msg["data"]["game_state"] = game.state
+        ret_msg['data']["game_data"] = game.get_data()
+
+        if game.state == "PLAY":
+            ret_msg['data']['player_msg'] = f"It's now {game.get_player_turn()}'s turn!"
+            ret_msg['data']['broadcast_msg'] = f"{username} stands! It's now {game.get_player_turn()}'s turn!"
+        else:
+            ret_msg['data']['player_msg'] = f"It's now the dealers turn!"
+            ret_msg['data']['broadcast_msg'] = f"{username} stands! It's now the dealers turn!"
+
+    def double_down(self, username, game, ret_msg):
+        res = game.double_down(username)
+
+        if res == "NOT_PLAYERS_TURN":
+            player = game.get_player_turn()
+            ret_msg['code'] = 'FAIL'
+            ret_msg['data']['player_msg'] = f"It's not your turn. It's {player}'s turn."
+            ret_msg['data']['broadcast_msg'] = None
+            return
+
+        ret_msg["code"] = "SUCCESS"
+        ret_msg["data"]['broadcast'] = True
+        ret_msg['data']['type'] = "PLAYER_UPDATE"
+        ret_msg["data"]["game_state"] = game.state
+        ret_msg['data']["game_data"] = game.get_data()
+
+        if res == "BUSTED":
+            if game.state == "PLAY":
+                ret_msg['data']['player_msg'] = f"You busted! It's now {game.get_player_turn()}'s turn!"
+                ret_msg['data']['broadcast_msg'] = f"{username} busted! It's now {game.get_player_turn()}'s turn!"
+            else:
+                ret_msg['data']['player_msg'] = "You busted! It's now the dealers turn."
+                ret_msg['data']['broadcast_msg'] = f"{username} busted! It's now the dealers turn!"
+
+        elif res == "SUCCESS":
+            ret_msg['data']['player_msg'] = f"It's now {game.get_player_turn()}'s turn!"
+            ret_msg['data']['broadcast_msg'] = f"{username} doubled down! It's now {game.get_player_turn()}'s turn!"
 
     def game_action(self, msg):
         code = msg["code"]

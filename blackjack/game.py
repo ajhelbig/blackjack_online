@@ -79,9 +79,11 @@ class Game:
 
         self.dealer.get_new_hand(self.deck)
 
-    def hit(self, username):
+    def players_turn(self, username):
+        return list(self.players.keys())[self.player_turn] == username
 
-        if list(self.players.keys())[self.player_turn] == username:
+    def hit(self, username):
+        if self.players_turn(username):
             player = self.players[username]
             player.hit(self.deck)
 
@@ -95,15 +97,28 @@ class Game:
             return "NOT_PLAYERS_TURN"
 
     def stand(self, username):
-        player = self.players[username]
-        player.stand()
-        return "SUCCESS"
+        if self.players_turn(username):
+            player = self.players[username]
+            player.stand()
+
+            if self.next_player_turn() is None:
+                self.state = "DEALER_PLAY"
+            
+            return "SUCCESS"
+        else:
+            return "NOT_PLAYERS_TURN"
 
     def double_down(self, username):
-        player = self.players[username]
-        player.double_down(self.deck)
+        if self.players_turn(username):
+            player = self.players[username]
+            player.double_down(self.deck)
 
-        if player.busted:
-            return "BUSTED"
+            if self.next_player_turn() is None:
+                self.state = "DEALER_PLAY"
 
-        return "SUCCESS"
+            if player.busted:
+                return "BUSTED"
+
+            return "SUCCESS"
+        else:
+            return "NOT_PLAYERS_TURN"
