@@ -22,9 +22,7 @@ class Game:
         self.player_turn %= self.num_players
 
         if self.player_turn == 0:
-            return None
-
-        return self.player_turn
+            self.dealer_play()
     
     def get_player_turn(self):
         return self.players[list(self.players.keys())[self.player_turn]].name
@@ -81,6 +79,14 @@ class Game:
 
     def players_turn(self, username):
         return list(self.players.keys())[self.player_turn] == username
+    
+    def dealer_play(self):
+        self.state = "DEALER_PLAY"
+        
+        while self.dealer.hands[0].value < 16:
+            self.dealer.hit(self.deck)
+
+        self.state = "BET"
 
     def hit(self, username):
         if self.players_turn(username):
@@ -88,8 +94,7 @@ class Game:
             player.hit(self.deck)
 
             if player.busted:
-                if self.next_player_turn() is None:
-                    self.state = "DEALER_PLAY"
+                self.next_player_turn()
                 return "BUSTED"
             
             return "SUCCESS"
@@ -100,9 +105,7 @@ class Game:
         if self.players_turn(username):
             player = self.players[username]
             player.stand()
-
-            if self.next_player_turn() is None:
-                self.state = "DEALER_PLAY"
+            self.next_player_turn()
             
             return "SUCCESS"
         else:
@@ -112,9 +115,7 @@ class Game:
         if self.players_turn(username):
             player = self.players[username]
             player.double_down(self.deck)
-
-            if self.next_player_turn() is None:
-                self.state = "DEALER_PLAY"
+            self.next_player_turn()
 
             if player.busted:
                 return "BUSTED"
